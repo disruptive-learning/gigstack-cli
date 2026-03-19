@@ -1,4 +1,4 @@
-import { getActiveProfile } from "./config.js";
+import { getActiveProfile, getTeamFromKey } from "./config.js";
 import pc from "picocolors";
 
 const BASE_URL = "https://api.gigstack.io/v2";
@@ -60,4 +60,31 @@ export async function api(
   }
 
   return data;
+}
+
+/**
+ * Resolves the primary team for the current API key.
+ * First checks if the JWT contains a team ID and tries GET /teams/{id}.
+ * Falls back to the first team in GET /teams.
+ */
+export async function resolveTeam(apiKey?: string): Promise<any> {
+  const key = apiKey || getApiKey();
+  const jwtTeamId = getTeamFromKey(key);
+
+  // Try direct fetch if JWT has a team
+  if (jwtTeamId) {
+    try {
+      const res = await api("GET", `/teams/${jwtTeamId}`, { apiKey: key });
+      if (res.data) return res.data;
+    } catch {}
+  }
+
+  // Fallback to list
+  const res = await api("GET", "/teams", { apiKey: key });
+  const teams = res.data || [];
+  if (jwtTeamId) {
+    const match = teams.find((t: any) => t.id === jwtTeamId);
+    if (match) return match;
+  }
+  return teams[0] || null;
 }

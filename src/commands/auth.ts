@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { saveProfile, removeProfile, switchProfile, getActiveProfile, listProfiles, isTestKey } from "../config.js";
-import { api } from "../api.js";
+import { api, resolveTeam } from "../api.js";
 import { success, error, printKeyValue } from "../output.js";
 import { askHidden } from "../prompt.js";
 
@@ -20,9 +20,7 @@ export function registerAuthCommands(program: Command) {
       if (!apiKey) { error("API key requerida"); process.exit(1); }
 
       try {
-        const res = await api("GET", "/teams", { apiKey });
-        const teams = res.data || [];
-        const team = teams[0];
+        const team = await resolveTeam(apiKey);
         const isTest = isTestKey(apiKey);
         saveProfile(opts.profile, apiKey, isTest ? "test" : "production");
         success(`Autenticado como ${pc.bold(team?.legal_name || team?.brand?.alias || "equipo gigstack")}`);
@@ -51,9 +49,7 @@ export function registerAuthCommands(program: Command) {
       if (!profile) { error("No autenticado. Ejecuta: gigstack login"); process.exit(1); }
 
       try {
-        const res = await api("GET", "/teams");
-        const teams = res.data || [];
-        const team = teams[0];
+        const team = await resolveTeam();
         printKeyValue({
           Perfil: profile.name,
           Modo: isTestKey(profile.apiKey) ? pc.yellow("test") : pc.green("producción"),

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { api } from "../api.js";
+import { api, resolveTeam } from "../api.js";
 import { getActiveProfile, listProfiles, isTestKey } from "../config.js";
 import { formatDate } from "../output.js";
 
@@ -54,16 +54,14 @@ export function registerDoctorCommand(program: Command) {
       console.log();
       try {
         const start = Date.now();
-        const res = await api("GET", "/teams");
+        const team = await resolveTeam(profile.apiKey);
         const latency = Date.now() - start;
         pass(`Conexión a API: ${latency}ms`);
 
-        const teams = res.data || [];
-        if (teams.length === 0) {
+        if (!team) {
           fail("No se encontraron equipos");
           allGood = false;
         } else {
-          const team = teams[0];
           pass(`Equipo: ${pc.bold(team.legal_name || team.brand?.alias || team.name || "—")}`);
 
           // RFC

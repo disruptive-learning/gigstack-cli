@@ -64,18 +64,29 @@ export function getActiveProfile(): { name: string; apiKey: string; environment:
   return { name: creds.activeProfile, ...creds.profiles[creds.activeProfile] };
 }
 
-export function isTestKey(apiKey: string): boolean {
-  if (apiKey.startsWith("sk_test")) return true;
-  // Try decoding JWT payload
+export function parseJwtPayload(apiKey: string): Record<string, any> | null {
   try {
     const parts = apiKey.split(".");
     if (parts.length === 3) {
-      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-      if (payload.livemode === false) return true;
-      if (payload.key_id?.includes("test")) return true;
+      return JSON.parse(Buffer.from(parts[1], "base64").toString());
     }
   } catch {}
+  return null;
+}
+
+export function isTestKey(apiKey: string): boolean {
+  if (apiKey.startsWith("sk_test")) return true;
+  const payload = parseJwtPayload(apiKey);
+  if (payload) {
+    if (payload.livemode === false) return true;
+    if (payload.key_id?.includes("test")) return true;
+  }
   return false;
+}
+
+export function getTeamFromKey(apiKey: string): string | null {
+  const payload = parseJwtPayload(apiKey);
+  return payload?.team || null;
 }
 
 export function listProfiles(): { name: string; active: boolean }[] {
