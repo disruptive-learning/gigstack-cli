@@ -5,8 +5,20 @@ const BASE_URL = "https://api.gigstack.io/v2";
 
 export class ApiError extends Error {
   constructor(public status: number, public body: any) {
-    super(body?.message || `API error ${status}`);
+    const detail = body?.error?.message || body?.error || "";
+    const msg = body?.message || `API error ${status}`;
+    super(detail ? `${msg}: ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : msg);
   }
+}
+
+export function getApiKey(override?: string): string {
+  if (override) return override;
+  const profile = getActiveProfile();
+  if (!profile) {
+    console.error(pc.red("No autenticado. Ejecuta: gigstack login"));
+    process.exit(1);
+  }
+  return profile.apiKey;
 }
 
 export async function api(
@@ -14,11 +26,7 @@ export async function api(
   path: string,
   opts?: { body?: any; query?: Record<string, string>; apiKey?: string; team?: string }
 ) {
-  const profile = opts?.apiKey ? { apiKey: opts.apiKey } : getActiveProfile();
-  if (!profile) {
-    console.error(pc.red("No autenticado. Ejecuta: gigstack login"));
-    process.exit(1);
-  }
+  const apiKey = getApiKey(opts?.apiKey);
 
   const url = new URL(`${BASE_URL}${path}`);
   if (opts?.query) {
@@ -28,14 +36,22 @@ export async function api(
   }
   if (opts?.team) url.searchParams.set("team", opts.team);
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      Authorization: `Bearer ${profile.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: opts?.body ? JSON.stringify(opts.body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: opts?.body ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch (e: any) {
+    if (e.code === "ENOTFOUND" || e.cause?.code === "ENOTFOUND") {
+      throw new Error("Sin conexión a internet. Verifica tu red.");
+    }
+    throw new Error(`Error de conexión: ${e.message}`);
+  }
 
   const data = await res.json();
 

@@ -9,6 +9,7 @@ import { registerServiceCommands } from "./commands/services.js";
 import { registerWebhookCommands } from "./commands/webhooks.js";
 import { registerTeamCommands } from "./commands/teams.js";
 import { registerReceiptCommands } from "./commands/receipts.js";
+import { registerDoctorCommand } from "./commands/doctor.js";
 
 const program = new Command();
 
@@ -24,6 +25,7 @@ program
   });
 
 registerAuthCommands(program);
+registerDoctorCommand(program);
 registerClientCommands(program);
 registerInvoiceCommands(program);
 registerPaymentCommands(program);
@@ -35,14 +37,15 @@ registerReceiptCommands(program);
 program.addHelpText("after", `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
+  ${pc.dim("$")} gigstack doctor                         Diagnóstico completo
   ${pc.dim("$")} gigstack whoami                          Ver cuenta actual
   ${pc.dim("$")} gigstack clients list                    Listar clientes
-  ${pc.dim("$")} gigstack clients search "ACME"           Buscar cliente
+  ${pc.dim("$")} gigstack clients create                  Crear cliente (interactivo)
   ${pc.dim("$")} gigstack invoices list                   Listar facturas
+  ${pc.dim("$")} gigstack invoices create                 Crear factura (interactivo)
   ${pc.dim("$")} gigstack invoices list --json             Salida JSON
   ${pc.dim("$")} gigstack payments list                   Listar pagos
   ${pc.dim("$")} gigstack services list                   Listar servicios
-  ${pc.dim("$")} gigstack webhooks list                   Ver webhooks
 
 ${pc.bold("Docs:")} https://docs.gigstack.io
 `);

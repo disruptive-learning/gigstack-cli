@@ -1,6 +1,16 @@
 import { Command } from "commander";
 import { api } from "../api.js";
 import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatDate } from "../output.js";
+import { ask, askRequired, select } from "../prompt.js";
+
+const TAX_SYSTEMS = [
+  { label: "601 — General de Ley (Personas Morales)", value: "601" },
+  { label: "612 — Personas Físicas con Actividad Empresarial", value: "612" },
+  { label: "616 — Sin obligaciones fiscales", value: "616" },
+  { label: "621 — Incorporación Fiscal", value: "621" },
+  { label: "625 — Régimen de actividades agrícolas", value: "625" },
+  { label: "626 — RESICO", value: "626" },
+];
 
 export function registerClientCommands(program: Command) {
   const clients = program.command("clients").description("Gestionar clientes");
@@ -52,30 +62,40 @@ export function registerClientCommands(program: Command) {
 
   clients
     .command("create")
-    .description("Crear un cliente")
-    .requiredOption("--name <name>", "Nombre o razón social")
-    .requiredOption("--email <email>", "Email")
-    .requiredOption("--rfc <rfc>", "RFC")
-    .requiredOption("--tax-system <code>", "Régimen fiscal (ej: 601, 612, 626)")
+    .description("Crear un cliente (interactivo si no se pasan flags)")
+    .option("--name <name>", "Nombre o razón social")
+    .option("--email <email>", "Email")
+    .option("--rfc <rfc>", "RFC")
+    .option("--tax-system <code>", "Régimen fiscal (ej: 601, 612, 626)")
     .option("--zip <zip>", "Código postal")
-    .option("--use <use>", "Uso CFDI (default: G03)", "G03")
+    .option("--use <use>", "Uso CFDI", "G03")
     .option("--team <id>", "Team ID")
     .action(async (opts) => {
       try {
+        const interactive = !opts.name && !opts.rfc;
+
+        const name = opts.name || (interactive ? await askRequired("Nombre / razón social") : "");
+        const email = opts.email || (interactive ? await ask("Email") : "");
+        const rfc = opts.rfc || (interactive ? await askRequired("RFC") : "");
+        const taxSystem = opts.taxSystem || (interactive ? await select("Régimen fiscal", TAX_SYSTEMS) : "");
+        const zip = opts.zip || (interactive ? await ask("Código postal") : "");
+
+        if (!name || !rfc) { error("Nombre y RFC son requeridos"); process.exit(1); }
+
         const res = await api("POST", "/clients", {
           body: {
-            name: opts.name,
-            legal_name: opts.name,
-            email: opts.email,
-            tax_id: opts.rfc,
-            tax_system: opts.taxSystem,
+            name,
+            legal_name: name,
+            email: email || undefined,
+            tax_id: rfc,
+            tax_system: taxSystem || undefined,
             use: opts.use,
-            address: opts.zip ? { zip: opts.zip } : undefined,
+            address: zip ? { zip } : undefined,
           },
           team: opts.team,
         });
         success(`Cliente creado: ${res.data.id}`);
-        if (!isJsonMode()) console.log(`  RFC: ${res.data.tax_id}  Email: ${res.data.email}`);
+        if (!isJsonMode()) console.log(`  RFC: ${res.data.tax_id}  Email: ${res.data.email || "—"}`);
         else printJson(res.data);
       } catch (e: any) { error(e.message); }
     });

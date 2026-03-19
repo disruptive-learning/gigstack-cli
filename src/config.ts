@@ -64,6 +64,20 @@ export function getActiveProfile(): { name: string; apiKey: string; environment:
   return { name: creds.activeProfile, ...creds.profiles[creds.activeProfile] };
 }
 
+export function isTestKey(apiKey: string): boolean {
+  if (apiKey.startsWith("sk_test")) return true;
+  // Try decoding JWT payload
+  try {
+    const parts = apiKey.split(".");
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+      if (payload.livemode === false) return true;
+      if (payload.key_id?.includes("test")) return true;
+    }
+  } catch {}
+  return false;
+}
+
 export function listProfiles(): { name: string; active: boolean }[] {
   const creds = readCredentials();
   if (!creds) return [];
