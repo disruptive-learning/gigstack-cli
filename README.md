@@ -35,6 +35,42 @@ gigstack switch <perfil>          # Cambiar perfil activo
 gigstack doctor                   # Diagnostico completo
 ```
 
+### Pago rapido + autofactura
+
+El comando `pay` es la forma mas rapida de cobrar y facturar. Registra el pago, crea el cliente si no existe, y envia el portal de autofactura automaticamente.
+
+```bash
+gigstack pay                      # Modo interactivo
+```
+
+Con flags (para scripts y agentes):
+
+```bash
+gigstack pay \
+  --email cliente@empresa.com \
+  --name "Juan Perez" \
+  --description "Servicios profesionales" \
+  --amount 5000 \
+  --iva \
+  --payment-form 03
+```
+
+Desde stdin (para agentes AI):
+
+```bash
+echo '{"email":"cliente@empresa.com","description":"Consultoria","amount":5000}' | gigstack pay --stdin --json
+```
+
+Opciones de automatizacion (`--automation`):
+
+| Valor | Descripcion |
+|-------|-------------|
+| `pue_invoice` | Factura PUE automatica al registrar (default) |
+| `ppd_invoice_and_complement` | Factura PPD + complemento de pago |
+| `none` | Solo registra el pago, sin factura |
+
+El cliente recibe un portal donde puede completar sus datos fiscales y descargar su factura. No necesitas conocer su RFC de antemano.
+
 ### Clientes
 
 ```bash

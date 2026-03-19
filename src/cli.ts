@@ -10,6 +10,7 @@ import { registerWebhookCommands } from "./commands/webhooks.js";
 import { registerTeamCommands } from "./commands/teams.js";
 import { registerReceiptCommands } from "./commands/receipts.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
+import { registerPayCommand } from "./commands/pay.js";
 
 const program = new Command();
 
@@ -26,6 +27,7 @@ program
 
 registerAuthCommands(program);
 registerDoctorCommand(program);
+registerPayCommand(program);
 registerClientCommands(program);
 registerInvoiceCommands(program);
 registerPaymentCommands(program);
@@ -38,6 +40,7 @@ program.addHelpText("after", `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
   ${pc.dim("$")} gigstack doctor                         Diagnóstico completo
+  ${pc.dim("$")} gigstack pay                             Registrar pago + autofactura
   ${pc.dim("$")} gigstack whoami                          Ver cuenta actual
   ${pc.dim("$")} gigstack clients list                    Listar clientes
   ${pc.dim("$")} gigstack clients create                  Crear cliente (interactivo)
