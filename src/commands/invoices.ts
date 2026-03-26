@@ -1,8 +1,11 @@
 import { Command } from "commander";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import pc from "picocolors";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate } from "../output.js";
+import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
+import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
 function uid(item: any): string {
   return item.uuid ? item.uuid.slice(0, 8) + "…" : item.id ? item.id.slice(0, 12) + "…" : "—";
@@ -11,17 +14,21 @@ function uid(item: any): string {
 export function registerInvoiceCommands(program: Command) {
   const invoices = program.command("invoices").description("Gestionar facturas CFDI");
 
-  invoices
-    .command("list")
-    .description("Listar facturas de ingreso")
-    .option("-l, --limit <n>", "Límite", "20")
-    .option("--status <status>", "Filtrar por status")
-    .option("--team <id>", "Team ID")
+  withListOpts(
+    invoices
+      .command("list")
+      .description("Listar facturas de ingreso")
+  )
+    .option("--status <status>", "Filtrar por status (valid, cancelled)")
+    .option("--client <id>", "Filtrar por cliente")
+    .option("--series <series>", "Filtrar por serie")
     .action(async (opts) => {
       try {
-        const query: Record<string, string> = { limit: opts.limit };
+        const query = buildListQuery(opts);
         if (opts.status) query.status = opts.status;
-        const res = await api("GET", "/invoices/income", { query, team: opts.team });
+        if (opts.client) query.client_id = opts.client;
+        if (opts.series) query.series = opts.series;
+        const res = await spin("Cargando facturas…", () => api("GET", "/invoices/income", { query, team: opts.team }));
         const items = res.data || [];
         if (isJsonMode()) return printJson(items);
         printTable(
@@ -29,11 +36,12 @@ export function registerInvoiceCommands(program: Command) {
             uuid: uid(i),
             cliente: (i.client?.legal_name || i.client?.name || "—").slice(0, 25),
             total: formatMoney(i.total, i.currency),
+            método: i.payment_method || "—",
             status: i.status || "—",
             fecha: formatDate(i.created_at),
           })),
         );
-        if (res.has_more) console.log(`\n... ${res.total_results} total`);
+        printPaginationHint(res);
       } catch (e: any) { error(e.message); }
     });
 
@@ -51,12 +59,15 @@ export function registerInvoiceCommands(program: Command) {
           Status: i.status || "—",
           Cliente: i.client?.legal_name || i.client?.name || "—",
           RFC: i.client?.tax_id || "—",
+          Email: i.client?.email || "—",
           Subtotal: formatMoney(i.subtotal, i.currency),
           Total: formatMoney(i.total, i.currency),
           "Método pago": i.payment_method || "—",
           "Forma pago": i.payment_form || "—",
           Serie: i.series || "—",
           Folio: i.folio_number || "—",
+          "Saldo pendiente": i.last_balance !== undefined ? formatMoney(i.last_balance, i.currency) : "—",
+          Complementos: i.payment_complements ?? "—",
           Creado: formatDate(i.created_at),
         });
       } catch (e: any) { error(e.message); }
@@ -72,6 +83,8 @@ export function registerInvoiceCommands(program: Command) {
     .option("--use <use>", "Uso CFDI", "G03")
     .option("--currency <code>", "Moneda", "MXN")
     .option("--series <series>", "Serie")
+    .option("--send-email", "Enviar factura por email al cliente")
+    .option("--emails <emails>", "Emails adicionales (separados por coma)")
     .option("--team <id>", "Team ID")
     .action(async (opts) => {
       try {
@@ -80,29 +93,39 @@ export function registerInvoiceCommands(program: Command) {
         let items: any[];
 
         if (interactive) {
-          // Search for client interactively
-          const clientQuery = await askRequired("Buscar cliente (nombre, RFC o email)");
-          const searchRes = await api("GET", "/clients/search", { query: { q: clientQuery }, team: opts.team });
-          const found = searchRes.data || [];
-          if (found.length === 0) {
-            error("No se encontró el cliente");
-            process.exit(1);
-          }
-          if (found.length === 1) {
-            clientId = found[0].id;
-            console.log(pc.dim(`  → ${found[0].legal_name || found[0].name} (${found[0].tax_id || "sin RFC"})`));
-          } else {
-            const chosen = await select(
-              "Selecciona cliente",
-              found.slice(0, 8).map((c: any) => ({
-                label: `${c.legal_name || c.name} — ${c.tax_id || "sin RFC"}`,
-                value: c.id,
-              })),
-            );
-            clientId = chosen;
+          const clientQuery = await askRequired("Buscar cliente (nombre, RFC, email o ID)");
+
+          if (clientQuery.startsWith("client_") || clientQuery.match(/^[a-zA-Z0-9_-]{10,}$/)) {
+            try {
+              const directRes = await spin("Buscando cliente…", () => api("GET", `/clients/${clientQuery}`, { team: opts.team }));
+              if (directRes.data) {
+                clientId = directRes.data.id;
+                const c = directRes.data;
+                console.log(pc.dim(`  → ${c.legal_name || c.name || "—"} (${c.tax_id || "sin RFC"})`));
+              }
+            } catch {
+              // Not found by ID, fall through to search
+            }
           }
 
-          // Build items interactively
+          if (!clientId) {
+            const searchRes = await spin("Buscando cliente…", () => api("GET", "/clients/search", { query: { q: clientQuery }, team: opts.team }));
+            const found = searchRes.data || [];
+            if (found.length === 0) { error("No se encontró el cliente"); process.exit(1); }
+            if (found.length === 1) {
+              clientId = found[0].id;
+              console.log(pc.dim(`  → ${found[0].legal_name || found[0].name} (${found[0].tax_id || "sin RFC"})`));
+            } else {
+              clientId = await select(
+                "Selecciona cliente",
+                found.slice(0, 8).map((c: any) => ({
+                  label: `${c.legal_name || c.name} — ${c.tax_id || "sin RFC"}`,
+                  value: c.id,
+                })),
+              );
+            }
+          }
+
           items = [];
           let addMore = true;
           while (addMore) {
@@ -115,31 +138,23 @@ export function registerInvoiceCommands(program: Command) {
             const addIva = await confirm("Agregar IVA 16%?");
 
             const item: any = { description, quantity, unit_price: unitPrice, product_key: productKey, unit_key: unitKey };
-            if (addIva) {
-              item.taxes = [{ type: "IVA", rate: 0.16, factor: "Tasa", withholding: false }];
-            }
+            if (addIva) item.taxes = [{ type: "IVA", rate: 0.16, factor: "Tasa", withholding: false }];
             items.push(item);
-
             addMore = await confirm("Agregar otro concepto?", false);
           }
 
-          // Payment form
-          const paymentForm = await select("Forma de pago", [
+          opts.paymentForm = await select("Forma de pago", [
             { label: "03 — Transferencia electrónica", value: "03" },
             { label: "01 — Efectivo", value: "01" },
             { label: "04 — Tarjeta de crédito", value: "04" },
             { label: "28 — Tarjeta de débito", value: "28" },
             { label: "99 — Por definir", value: "99" },
           ]);
-          opts.paymentForm = paymentForm;
-
-          const paymentMethod = await select("Método de pago", [
+          opts.paymentMethod = await select("Método de pago", [
             { label: "PUE — Pago en una sola exhibición", value: "PUE" },
             { label: "PPD — Pago en parcialidades o diferido", value: "PPD" },
           ]);
-          opts.paymentMethod = paymentMethod;
 
-          // Summary
           const subtotal = items.reduce((sum: number, i: any) => sum + i.quantity * i.unit_price, 0);
           console.log(`\n${pc.bold("Resumen:")}`);
           console.log(`  Cliente: ${clientId}`);
@@ -155,22 +170,40 @@ export function registerInvoiceCommands(program: Command) {
           try { items = JSON.parse(opts.items); } catch { error("Items JSON inválido"); process.exit(1); }
         }
 
-        const res = await api("POST", "/invoices/income", {
-          body: {
-            automation_type: "stamp_invoice",
-            client: { id: clientId },
-            items,
-            payment_form: opts.paymentForm,
-            payment_method: opts.paymentMethod,
-            use: opts.use,
-            currency: opts.currency,
-            series: opts.series,
-          },
-          team: opts.team,
-        });
+        const body: any = {
+          client: { id: clientId },
+          items,
+          payment_form: opts.paymentForm,
+          payment_method: opts.paymentMethod,
+          use: opts.use,
+          currency: opts.currency,
+          series: opts.series || undefined,
+        };
+        if (opts.sendEmail) body.send_email = true;
+        if (opts.emails) body.emails = opts.emails.split(",").map((e: string) => e.trim());
+
+        const res = await spin("Timbrando factura…", () => api("POST", "/invoices/income", { body, team: opts.team }));
         success(`Factura creada: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
         else console.log(`  Total: ${formatMoney(res.data.total, res.data.currency)}`);
+      } catch (e: any) { error(e.message); }
+    });
+
+  invoices
+    .command("send <uuid>")
+    .description("Reenviar factura por email (PDF + XML adjuntos)")
+    .option("--to <emails>", "Emails adicionales separados por coma")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const body: any = {};
+        if (opts.to) body.emails = opts.to.split(",").map((e: string) => e.trim());
+        const res = await spin("Enviando factura por email…", () => api("POST", `/invoices/${uuid}/send`, { body, team: opts.team }));
+        if (isJsonMode()) return printJson(res.data);
+        success(`Email enviado a: ${(res.data?.recipients || []).join(", ")}`);
+        if (res.data?.attachments?.length) {
+          console.log(pc.dim(`  Adjuntos: ${res.data.attachments.join(", ")}`));
+        }
       } catch (e: any) { error(e.message); }
     });
 
@@ -182,10 +215,10 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        await api("DELETE", `/invoices/${uuid}`, {
+        await spin("Cancelando factura…", () => api("DELETE", `/invoices/${uuid}`, {
           body: { motive: opts.motive, replacement: opts.replacement },
           team: opts.team,
-        });
+        }));
         success(`Factura ${uuid} cancelada`);
       } catch (e: any) { error(e.message); }
     });
@@ -196,7 +229,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (query, opts) => {
       try {
-        const res = await api("GET", "/invoices/search", { query: { q: query }, team: opts.team });
+        const res = await spin("Buscando facturas…", () => api("GET", "/invoices/search", { query: { q: query }, team: opts.team }));
         const items = res.data || [];
         if (isJsonMode()) return printJson(items);
         printTable(
@@ -224,17 +257,43 @@ export function registerInvoiceCommands(program: Command) {
       } catch (e: any) { error(e.message); }
     });
 
+  invoices
+    .command("download <uuid>")
+    .description("Descargar PDF y XML de una factura al directorio actual")
+    .option("-o, --out <dir>", "Directorio de salida", ".")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const res = await spin("Obteniendo archivos…", () => api("GET", `/invoices/${uuid}/files`, { team: opts.team }));
+        const files = res.data;
+        const saved: string[] = [];
+        if (files.pdf) {
+          const pdfRes = await spin("Descargando PDF…", () => fetch(files.pdf));
+          const buf = Buffer.from(await pdfRes.arrayBuffer());
+          const path = join(opts.out, `${uuid}.pdf`);
+          writeFileSync(path, buf);
+          saved.push(path);
+        }
+        if (files.xml) {
+          const xmlRes = await spin("Descargando XML…", () => fetch(files.xml));
+          const buf = Buffer.from(await xmlRes.arrayBuffer());
+          const path = join(opts.out, `${uuid}.xml`);
+          writeFileSync(path, buf);
+          saved.push(path);
+        }
+        if (saved.length === 0) error("No se encontraron archivos para esta factura");
+        else success(`Descargado: ${saved.join(", ")}`);
+      } catch (e: any) { error(e.message); }
+    });
+
   // Drafts
   const drafts = invoices.command("drafts").description("Pre-facturas / borradores");
 
-  drafts
-    .command("list")
-    .description("Listar borradores")
-    .option("-l, --limit <n>", "Límite", "20")
-    .option("--team <id>", "Team ID")
+  withListOpts(drafts.command("list").description("Listar borradores"))
     .action(async (opts) => {
       try {
-        const res = await api("GET", "/invoices/draft", { query: { limit: opts.limit }, team: opts.team });
+        const query = buildListQuery(opts);
+        const res = await spin("Cargando borradores…", () => api("GET", "/invoices/draft", { query, team: opts.team }));
         const items = res.data || [];
         if (isJsonMode()) return printJson(items);
         printTable(
@@ -245,6 +304,7 @@ export function registerInvoiceCommands(program: Command) {
             fecha: formatDate(i.created_at),
           })),
         );
+        printPaginationHint(res);
       } catch (e: any) { error(e.message); }
     });
 
@@ -254,21 +314,18 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await api("POST", `/invoices/draft/${uuid}/stamp`, { team: opts.team });
+        const res = await spin("Timbrando borrador…", () => api("POST", `/invoices/draft/${uuid}/stamp`, { team: opts.team }));
         success(`Borrador timbrado: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e.message); }
     });
 
   // Credit notes
-  invoices
-    .command("credit-notes")
-    .description("Listar notas de crédito")
-    .option("-l, --limit <n>", "Límite", "20")
-    .option("--team <id>", "Team ID")
+  withListOpts(invoices.command("credit-notes").description("Listar notas de crédito"))
     .action(async (opts) => {
       try {
-        const res = await api("GET", "/invoices/egress", { query: { limit: opts.limit }, team: opts.team });
+        const query = buildListQuery(opts);
+        const res = await spin("Cargando notas de crédito…", () => api("GET", "/invoices/egress", { query, team: opts.team }));
         const items = res.data || [];
         if (isJsonMode()) return printJson(items);
         printTable(
@@ -279,18 +336,18 @@ export function registerInvoiceCommands(program: Command) {
             status: i.status || "—",
           })),
         );
+        printPaginationHint(res);
       } catch (e: any) { error(e.message); }
     });
 
   // Complements
-  invoices
-    .command("complements")
-    .description("Listar complementos de pago")
-    .option("-l, --limit <n>", "Límite", "20")
-    .option("--team <id>", "Team ID")
+  withListOpts(invoices.command("complements").description("Listar complementos de pago"))
+    .option("--invoice <uuid>", "Filtrar por factura PPD relacionada")
     .action(async (opts) => {
       try {
-        const res = await api("GET", "/invoices/complements", { query: { limit: opts.limit }, team: opts.team });
+        const query = buildListQuery(opts);
+        if (opts.invoice) query.invoice_id = opts.invoice;
+        const res = await spin("Cargando complementos…", () => api("GET", "/invoices/complements", { query, team: opts.team }));
         const items = res.data || [];
         if (isJsonMode()) return printJson(items);
         printTable(
@@ -301,6 +358,7 @@ export function registerInvoiceCommands(program: Command) {
             status: i.status || "—",
           })),
         );
+        printPaginationHint(res);
       } catch (e: any) { error(e.message); }
     });
 }

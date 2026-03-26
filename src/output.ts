@@ -57,7 +57,42 @@ export function warn(msg: string) {
 }
 
 export function formatMoney(amount: number, currency = "MXN") {
-  return `$${(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${currency.toUpperCase()}`;
+  return `$${(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency.toUpperCase()}`;
+}
+
+// ─── Spinner ────────────────────────────────────────────────
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+export function spinner(message: string) {
+  if (jsonMode) return { stop() {} };
+
+  let i = 0;
+  const stream = process.stderr;
+  const interval = setInterval(() => {
+    stream.write(`\r${pc.cyan(SPINNER_FRAMES[i++ % SPINNER_FRAMES.length])} ${pc.dim(message)}`);
+  }, 80);
+
+  return {
+    stop(finalMessage?: string) {
+      clearInterval(interval);
+      stream.write("\r" + " ".repeat(message.length + 4) + "\r");
+      if (finalMessage) stream.write(finalMessage + "\n");
+    },
+  };
+}
+
+/** Run an async fn with a spinner that auto-stops on success or error. */
+export async function spin<T>(message: string, fn: () => Promise<T>): Promise<T> {
+  const s = spinner(message);
+  try {
+    const result = await fn();
+    s.stop();
+    return result;
+  } catch (e) {
+    s.stop();
+    throw e;
+  }
 }
 
 export function formatDate(val: any): string {

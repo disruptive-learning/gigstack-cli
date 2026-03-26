@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
-import { printJson, success, error, isJsonMode, formatMoney } from "../output.js";
+import { printJson, success, error, isJsonMode, formatMoney, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 
 export function registerPayCommand(program: Command) {
@@ -132,7 +132,7 @@ export function registerPayCommand(program: Command) {
           try { body.metadata = JSON.parse(opts.metadata); } catch {}
         }
 
-        const res = await api("POST", "/payments/register", { body, team: opts.team });
+        const res = await spin("Registrando pago…", () => api("POST", "/payments/register", { body, team: opts.team }));
         const payment = res.data;
 
         if (isJsonMode()) return printJson(payment);

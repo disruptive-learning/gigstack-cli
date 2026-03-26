@@ -11,6 +11,11 @@ import { registerTeamCommands } from "./commands/teams.js";
 import { registerReceiptCommands } from "./commands/receipts.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerPayCommand } from "./commands/pay.js";
+import { registerStatusCommand } from "./commands/status.js";
+import { registerContextCommand } from "./commands/context.js";
+import { registerCompletionsCommand } from "./commands/completions.js";
+import { registerExportCommand } from "./commands/export.js";
+import { registerExplainCommand } from "./commands/explain.js";
 
 const program = new Command();
 
@@ -26,6 +31,8 @@ program
   });
 
 registerAuthCommands(program);
+registerContextCommand(program);
+registerStatusCommand(program);
 registerDoctorCommand(program);
 registerPayCommand(program);
 registerClientCommands(program);
@@ -35,10 +42,15 @@ registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
 registerReceiptCommands(program);
+registerCompletionsCommand(program);
+registerExportCommand(program);
+registerExplainCommand(program);
 
 program.addHelpText("after", `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
+  ${pc.dim("$")} gigstack context payments               Entender pagos (para agentes)
+  ${pc.dim("$")} gigstack status                         Resumen rápido del equipo
   ${pc.dim("$")} gigstack doctor                         Diagnóstico completo
   ${pc.dim("$")} gigstack pay                             Registrar pago + autofactura
   ${pc.dim("$")} gigstack whoami                          Ver cuenta actual
@@ -49,6 +61,9 @@ ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack invoices list --json             Salida JSON
   ${pc.dim("$")} gigstack payments list                   Listar pagos
   ${pc.dim("$")} gigstack services list                   Listar servicios
+  ${pc.dim("$")} gigstack export invoices --from 2026-01  Exportar facturas a CSV
+  ${pc.dim("$")} gigstack export payments --format json   Exportar pagos a JSON
+  ${pc.dim("$")} gigstack explain <id>                    Explicar cualquier recurso
 
 ${pc.bold("Docs:")} https://docs.gigstack.io
 `);
