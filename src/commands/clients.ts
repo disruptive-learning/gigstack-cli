@@ -184,6 +184,38 @@ export function registerClientCommands(program: Command) {
     });
 
   clients
+    .command("portal")
+    .description("Generar link del portal de cliente (autofactura, documentos, pagos)")
+    .option("--id <id>", "Client ID")
+    .option("--email <email>", "Email del cliente")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        if (!opts.id && !opts.email) {
+          const query = await askRequired("Email o ID del cliente");
+          if (query.startsWith("client_") || query.startsWith("cus_")) opts.id = query;
+          else opts.email = query;
+        }
+
+        const body: any = {};
+        if (opts.id) body.id = opts.id;
+        if (opts.email) body.email = opts.email;
+
+        const res = await spin("Generando portal…", () => api("POST", "/clients/customerportal", { body, team: opts.team }));
+        const data = res.data;
+
+        if (isJsonMode()) return printJson(data);
+
+        success("Portal generado");
+        console.log(`  URL: ${pc.bold(data.url)}`);
+        if (data.expires_at) {
+          const expires = new Date(data.expires_at > 1e12 ? data.expires_at : data.expires_at * 1000);
+          console.log(pc.dim(`  Expira: ${expires.toISOString().slice(0, 10)} (5 días)`));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  clients
     .command("delete <id>")
     .description("Eliminar un cliente")
     .option("--team <id>", "Team ID")

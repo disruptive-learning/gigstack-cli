@@ -148,6 +148,9 @@ gigstack clients create                # Create (interactive)
 gigstack clients update <id>           # Update (interactive or flags)
 gigstack clients search "ACME"         # Search by name, RFC, or email
 gigstack clients validate <id>         # Validate fiscal data against SAT
+gigstack clients portal                # Generate customer portal link (interactive)
+gigstack clients portal --email cli@co.com  # By email
+gigstack clients portal --id client_abc     # By client ID
 gigstack clients delete <id>           # Delete
 
 # Create with flags
@@ -269,6 +272,22 @@ gigstack export payments --status succeeded --currency MXN
 ```
 
 Supported entities: `invoices`, `payments`, `receipts`, `clients`.
+
+### Forecast
+
+Project revenue, collections risk, EOM receipts, and cash flow based on historical data.
+
+```bash
+gigstack forecast                      # This month projection (3 months ahead)
+gigstack forecast --months 6           # Project 6 months ahead
+gigstack forecast --json               # Structured output for agents
+```
+
+Shows:
+- Revenue trend (avg monthly, growth %, projection)
+- Cobranza risk (PPD aging probability, expected recovery vs likely loss)
+- EOM global invoice estimate (pending receipts x historical self-invoice rate)
+- Cash flow projection (pending links x conversion rate + expected PPD collections)
 
 ### Shell completions
 

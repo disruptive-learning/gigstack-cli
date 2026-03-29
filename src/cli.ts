@@ -16,6 +16,7 @@ import { registerContextCommand } from "./commands/context.js";
 import { registerCompletionsCommand } from "./commands/completions.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerExplainCommand } from "./commands/explain.js";
+import { registerForecastCommand } from "./commands/forecast.js";
 
 const program = new Command();
 
@@ -45,6 +46,7 @@ registerReceiptCommands(program);
 registerCompletionsCommand(program);
 registerExportCommand(program);
 registerExplainCommand(program);
+registerForecastCommand(program);
 
 program.addHelpText("after", `
 ${pc.bold("Ejemplos:")}
