@@ -18,12 +18,14 @@ import { registerExportCommand } from "./commands/export.js";
 import { registerExplainCommand } from "./commands/explain.js";
 import { registerForecastCommand } from "./commands/forecast.js";
 
+declare const __PKG_VERSION__: string;
+
 const program = new Command();
 
 program
   .name("gigstack")
   .description("gigstack CLI — facturación electrónica desde tu terminal")
-  .version("0.1.0")
+  .version(__PKG_VERSION__)
   .option("--json", "Salida en formato JSON")
   .option("--team <id>", "Team ID para operaciones multi-equipo")
   .hook("preAction", (thisCommand) => {
