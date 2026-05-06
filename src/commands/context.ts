@@ -313,6 +313,65 @@ const KNOWLEDGE: Record<string, ContextTopic> = {
       "Webhooks include a signature header for verification.",
     ],
   },
+
+  descarga_masiva_sat: {
+    title: "Descarga Masiva SAT (received invoices)",
+    summary:
+      "Descarga Masiva SAT is gigstack's automated mirror of every CFDI the SAT has on file for a team's RFC — both invoices issued BY the team and, more importantly, invoices RECEIVED from suppliers (gastos / expenses). It runs on a schedule against PADE/Prodigia using the team's uploaded FIEL credentials, persists each invoice to the sat_invoices collection, and downloads the XML on demand. It is a paid add-on for plans that don't include the feature.",
+    concepts: {
+      sat_invoice:
+        "An invoice mirrored from the SAT (not created in gigstack). Lives in the sat_invoices Firestore collection. Has a direction: 'received' (a supplier issued it to your RFC) or 'issued' (your RFC issued it).",
+      direction:
+        "'received' = supplier → you (gastos page). 'issued' = you → client (cross-checked against the invoices created in gigstack itself). The CLI list/get commands return both unless --direction is passed.",
+      hasXml:
+        "Boolean on the sat_invoice doc. True once the XML is fetched and stored under sat_invoices/{uuid}/files/{uuid}. False means metadata exists but the XML download failed or hasn't run yet.",
+      xmlError:
+        "Error message from the last XML fetch attempt. Set when Prodigia rejects the download (UUID not yet in their mirror, RFC mismatch, etc.). Cleared on successful retry.",
+      fiel:
+        "e.firma — SAT-issued certificate (.cer + .key + password) required to authorize downloads on the team's behalf. Uploaded once via the web app at app.gigstack.pro/gastos. Not exposed via CLI for security reasons.",
+      pade_prodigia:
+        "Upstream provider that brokers Descarga Masiva. The retry endpoint and scheduled downloads call PADE/Prodigia under the hood; their failures surface as 422 (rejected) or 502 (gateway/timeout) from the CLI.",
+      schedule:
+        "Recurring config (time of day, types, days_back, enabled) that triggers downloads automatically. View/modify with 'gigstack invoices sat schedule show|set|history'.",
+      activation_status:
+        "GET /v2/invoices/download/activate/status returns one of: 'active' (running), 'needs_activation' (plan includes feature, just enable), 'needs_addon' (paid plan without the feature — $400 MXN/mes per RFC + per-download), 'needs_upgrade' (free plan — must upgrade first).",
+    },
+    statuses: {
+      active: "Service hired and running. Scheduled downloads execute, retry endpoint works, billing is wired.",
+      needs_activation: "Plan already includes Descarga Masiva — call 'sat activate' to enable. No extra charge.",
+      needs_addon: "Plan does NOT include the feature, but supports the add-on ($400 MXN/mes/RFC + $0.20 MXN per download). 'sat activate' will subscribe.",
+      needs_upgrade: "Free plan — must upgrade at app.gigstack.pro/billing before activation is possible.",
+      ready: "On a single sat_invoice: hasXml === true, XML file is downloaded and parsed.",
+      building: "On a single sat_invoice: download in flight or queued.",
+      error: "On a single sat_invoice: last XML fetch failed (see xmlError). Use 'sat retry <uuid>' to try again.",
+    },
+    actions: {
+      "invoices sat status": "Check activation state + pricing summary. Always run this first.",
+      "invoices sat activate": "Hire the service. Confirms pricing, then enables. Use -y to skip confirmation.",
+      "invoices sat deactivate": "Cancel the service. Stops scheduled downloads and removes billing.",
+      "invoices sat list": "List downloaded SAT invoices. Filters: --direction received|issued, --rfc, --type, --status, --from --to.",
+      "invoices sat get <uuid>": "Detail view of one SAT invoice (issuer, receiver, totals, XML status, errors).",
+      "invoices sat retry <uuid>": "Retry the XML download for a sat_invoice in error state. Returns 422 if Prodigia rejects, 502 if gateway/timeout.",
+      "invoices sat pdf <uuid> --out <dir>": "Generate and save the PDF locally. The PDF is rendered server-side from the XML.",
+      "invoices sat schedule show": "Show current automated-download config (time, types, days_back, enabled).",
+      "invoices sat schedule set": "Update the schedule. Required: --time HH:mm --types issued,received --days-back N [--enabled true|false].",
+      "invoices sat schedule history": "Recent scheduled-run results (counts, errors).",
+    },
+    relationships: [
+      "FIEL uploaded (web only) → 'sat activate' → schedule runs daily → sat_invoices populated → XMLs fetched → 'invoices sat list/get/pdf' usable from CLI",
+      "sat_invoice with direction='issued' is cross-referenced with the invoices/{uuid} collection (CFDIs gigstack itself stamped). direction='received' has no gigstack-side counterpart — it originated externally.",
+      "Failed XML downloads (xmlError set) → 'sat retry' → on success, hasXml=true, ready for PDF generation. On failure, surface the Prodigia message to the user.",
+      "Activation status drives the UI banner on /gastos AND gates the API. needs_upgrade/needs_addon means write endpoints (retry, pdf) still work for already-downloaded invoices but new downloads won't be scheduled.",
+    ],
+    tips: [
+      "Always run 'sat status' before 'sat activate' so you can quote pricing to the user.",
+      "FIEL upload is web-only by design — CLI does not expose it. Direct users to app.gigstack.pro/gastos for setup.",
+      "XML files live under sat_invoices/{uuid}/files/{uuid} in Firestore — there is no API endpoint to fetch the raw XML, so 'sat download' only saves the PDF. Tell the user the XML is web-only.",
+      "When 'sat retry' returns 422, the response.error field has the real Prodigia reason — surface it. 502 means the function timed out or the gateway failed; investigate logs.",
+      "received invoices (gastos) are the high-value use case — they show what the team owes / has paid suppliers, and they enable expense reconciliation against bank movements.",
+      "Pricing changes per plan: free plan needs upgrade first; paid plan without the feature pays $400 MXN/mes per RFC + $0.20 MXN per download; plan with feature included only pays the per-download meter.",
+    ],
+  },
 };
 
 const TOPIC_LIST = Object.keys(KNOWLEDGE);

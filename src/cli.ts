@@ -63,6 +63,9 @@ ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack invoices list                   Listar facturas
   ${pc.dim("$")} gigstack invoices create                 Crear factura (interactivo)
   ${pc.dim("$")} gigstack invoices list --json             Salida JSON
+  ${pc.dim("$")} gigstack invoices sat status             Estado de Descarga Masiva SAT
+  ${pc.dim("$")} gigstack invoices sat list --from 30d    Facturas recibidas del SAT
+  ${pc.dim("$")} gigstack invoices sat activate           Contratar Descarga Masiva SAT
   ${pc.dim("$")} gigstack payments list                   Listar pagos
   ${pc.dim("$")} gigstack services list                   Listar servicios
   ${pc.dim("$")} gigstack export invoices --from 2026-01  Exportar facturas a CSV
