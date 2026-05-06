@@ -7,6 +7,21 @@ function sum(items: any[], key = "total"): number {
   return items.reduce((s, i) => s + (i?.[key] || 0), 0);
 }
 
+function paymentTotal(p: any): number {
+  if (typeof p?.total === "number") return p.total;
+  if (typeof p?.subtotal === "number" && typeof p?.taxes === "number") return p.subtotal + p.taxes;
+  if (typeof p?.amount === "number") return p.amount / 100;
+  const items = Array.isArray(p?.items) ? p.items : [];
+  return items.reduce((s: number, it: any) => {
+    const line = (it?.quantity ?? 0) * (it?.unit_price ?? 0) - (it?.discount ?? 0);
+    return s + line;
+  }, 0);
+}
+
+function sumPayments(payments: any[]): number {
+  return payments.reduce((s, p) => s + paymentTotal(p), 0);
+}
+
 function fmt(amount: number, currency = "MXN") {
   return formatMoney(amount, currency);
 }
@@ -148,7 +163,7 @@ export function registerStatusCommand(program: Command) {
             },
             payments: {
               total: pay.length, succeeded: succeededPay.length, pending: pendingPay.length, failed: failedPay.length,
-              succeeded_amount: sum(succeededPay), pending_amount: sum(pendingPay),
+              succeeded_amount: sumPayments(succeededPay), pending_amount: sumPayments(pendingPay),
             },
             receipts: {
               total: rec.length, pending: pendingRec.length, invoiced: invoicedRec.length,
@@ -187,12 +202,12 @@ export function registerStatusCommand(program: Command) {
 
         // ─── Pagos ───
         console.log(`\n${pc.bold(pc.underline("Pagos"))}`);
-        console.log(`  Cobrados       ${String(succeededPay.length).padStart(4)}   ${pc.green(fmt(sum(succeededPay), cur))}`);
+        console.log(`  Cobrados       ${String(succeededPay.length).padStart(4)}   ${pc.green(fmt(sumPayments(succeededPay), cur))}`);
         if (pendingPay.length > 0) {
-          console.log(`  Pendientes     ${String(pendingPay.length).padStart(4)}   ${pc.yellow(fmt(sum(pendingPay), cur))}`);
+          console.log(`  Pendientes     ${String(pendingPay.length).padStart(4)}   ${pc.yellow(fmt(sumPayments(pendingPay), cur))}`);
         }
         if (failedPay.length > 0) {
-          console.log(`  Fallidos       ${String(failedPay.length).padStart(4)}   ${pc.red(fmt(sum(failedPay), cur))}`);
+          console.log(`  Fallidos       ${String(failedPay.length).padStart(4)}   ${pc.red(fmt(sumPayments(failedPay), cur))}`);
         }
 
         // ─── Recibos ───
@@ -237,7 +252,7 @@ export function registerStatusCommand(program: Command) {
 
         // ─── Conciliación ───
         const invoicedTotal = sum(validInv);
-        const collectedTotal = sum(succeededPay);
+        const collectedTotal = sumPayments(succeededPay);
         const pendingRecTotal = sum(pendingRec);
         const diff = collectedTotal - invoicedTotal;
 
