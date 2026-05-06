@@ -4,15 +4,41 @@
   "description": "gigstack CLI — facturación electrónica desde tu terminal",
   "type": "module",
   "bin": {
-    "gigstack": "./dist/cli.mjs"
+    "gigstack": "dist/cli.mjs"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node build.mjs",
-    "dev": "tsx src/cli.ts"
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": ["gigstack", "cfdi", "facturacion", "sat", "mexico", "cli"],
+  "keywords": [
+    "gigstack",
+    "cfdi",
+    "facturacion",
+    "sat",
+    "mexico",
+    "cli",
+    "invoicing",
+    "billing",
+    "payments"
+  ],
   "author": "gigstack",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/disruptive-learning/gigstack-cli.git"
+  },
+  "homepage": "https://docs.gigstack.io",
+  "bugs": {
+    "url": "https://github.com/disruptive-learning/gigstack-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "commander": "^14.0.3",
     "picocolors": "^1.1.1"

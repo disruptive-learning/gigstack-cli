@@ -11,4 +11,4 @@ await build({
   packages: "external",
 });
 
-console.log("Built dist/cli.js");
+console.log("Built dist/cli.mjs");

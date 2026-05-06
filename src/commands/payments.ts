@@ -70,6 +70,7 @@ export function registerPaymentCommands(program: Command) {
     .requiredOption("--items <json>", 'Items JSON')
     .option("--currency <code>", "Moneda", "MXN")
     .option("--methods <list>", "Métodos permitidos (card,bank,oxxo,stripe-spei)", "card,bank")
+    .option("--automation <type>", "Automatización al pagar: none, pue_invoice, ppd_invoice_and_complement", "none")
     .option("--send-email", "Enviar link por email al cliente")
     .option("--team <id>", "Team ID")
     .action(async (opts) => {
@@ -81,6 +82,7 @@ export function registerPaymentCommands(program: Command) {
           items,
           currency: opts.currency,
           allowed_payment_methods: opts.methods.split(","),
+          automation_type: opts.automation || "none",
         };
         if (opts.sendEmail) body.send_email = true;
         const res = await spin("Creando solicitud de pago…", () => api("POST", "/payments/request", { body, team: opts.team }));
@@ -97,6 +99,7 @@ export function registerPaymentCommands(program: Command) {
     .requiredOption("--items <json>", 'Items JSON')
     .requiredOption("--payment-form <code>", "Forma de pago (03=Transferencia, etc)")
     .option("--currency <code>", "Moneda", "MXN")
+    .option("--automation <type>", "Automatización: pue_invoice, ppd_invoice_and_complement, none", "pue_invoice")
     .option("--send-email", "Enviar confirmación por email")
     .option("--team <id>", "Team ID")
     .action(async (opts) => {
@@ -104,7 +107,7 @@ export function registerPaymentCommands(program: Command) {
         let items;
         try { items = JSON.parse(opts.items); } catch { error("Items JSON inválido"); process.exit(1); }
         const body: any = {
-          automation_type: "stamp_invoice",
+          automation_type: opts.automation || "pue_invoice",
           client: { id: opts.client },
           items,
           currency: opts.currency,

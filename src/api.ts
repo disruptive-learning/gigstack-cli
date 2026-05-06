@@ -5,9 +5,13 @@ const BASE_URL = "https://api.gigstack.io/v2";
 
 export class ApiError extends Error {
   constructor(public status: number, public body: any) {
-    const detail = body?.error?.message || body?.error || "";
-    const msg = body?.message || `API error ${status}`;
-    super(detail ? `${msg}: ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : msg);
+    const errObj = body?.error;
+    const msg = errObj?.message || body?.message || `API error ${status}`;
+    const details = errObj?.details;
+    const detailStr = details
+      ? (Array.isArray(details) ? details.join(", ") : String(details))
+      : "";
+    super(detailStr ? `${msg}: ${detailStr}` : msg);
   }
 }
 
