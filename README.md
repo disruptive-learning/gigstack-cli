@@ -1,8 +1,18 @@
 # gigstack CLI
 
-Command-line interface for the [gigstack API](https://docs.gigstack.io). Manage invoices, payments, clients, receipts, and more from your terminal.
+gigstack automates invoicing and revenue management for Mexican businesses. This CLI lets you create CFDI invoices, manage payments, clients, and receipts directly from your terminal or CI/CD pipeline.
+
+Built on the [gigstack API](https://docs.gigstack.io).
 
 ## Installation
+
+```bash
+npm install -g gigstack
+```
+
+After installing, the `gigstack` command is available globally.
+
+### Development setup
 
 ```bash
 git clone https://github.com/disruptive-learning/gigstack-cli.git
@@ -11,8 +21,6 @@ npm install
 npm run build
 npm link
 ```
-
-After linking, the `gigstack` command is available globally.
 
 ## Quick start
 
@@ -178,6 +186,9 @@ gigstack invoices drafts stamp <uuid>  # Stamp a draft into a real CFDI
 gigstack invoices credit-notes         # List credit notes (egress invoices)
 gigstack invoices complements          # List payment complements
 gigstack invoices complements --invoice <uuid>  # Filter by parent PPD invoice
+gigstack invoices sat list             # List CFDIs received from SAT (Descarga Masiva)
+gigstack invoices sat get <uuid>       # View a SAT-downloaded invoice
+gigstack invoices sat status           # Check Descarga Masiva activation status
 
 # Create with flags
 gigstack invoices create \
@@ -255,6 +266,63 @@ gigstack teams list                    # List teams
 gigstack teams get <id>                # View team details
 gigstack teams integrations            # View active integrations
 ```
+
+### Descarga Masiva SAT
+
+Automated download of every CFDI the SAT has issued to or for your RFC, including invoices issued by your suppliers. Useful for compliance, expense tracking, and reconciling what your vendors actually billed you.
+
+**Setup prerequisites:** Initial FIEL upload (.cer + .key files) and RFC registration are sensitive operations and only run from the web UI: [app.gigstack.pro/gastos](https://app.gigstack.pro/gastos). Once your FIEL is uploaded, the rest of the lifecycle (activate, list, retry, PDF) is available from the CLI.
+
+**Pricing:**
+
+- `$0.20 MXN` per XML downloaded (metered)
+- `$400 MXN/mes` per RFC add-on (only for plans that don't already include the feature)
+
+#### Hire the service
+
+```bash
+gigstack invoices sat status            # See activation state and next step
+gigstack invoices sat activate          # Confirms pricing, then enables on your subscription
+gigstack invoices sat deactivate        # Cancel (stops new downloads)
+```
+
+`status` returns one of:
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Already enabled; downloads are billing |
+| `needs_activation` | Plan includes the feature — run `activate` (no monthly add-on cost) |
+| `needs_addon` | Plan doesn't include it — `activate` adds the $400/RFC/month add-on |
+| `needs_upgrade` | Free plan — upgrade required at app.gigstack.pro/billing |
+
+#### Daily usage
+
+```bash
+gigstack invoices sat list                              # Recent downloads
+gigstack invoices sat list --direction received         # Only invoices issued to you (suppliers)
+gigstack invoices sat list --direction issued           # Only invoices you issued
+gigstack invoices sat list --type I --status Vigente    # Filter by CFDI type and status
+gigstack invoices sat list --from 2026-01 --to 2026-03  # Date range
+gigstack invoices sat list --issuer-rfc XAXX010101000   # Filter by issuer RFC
+gigstack invoices sat get <uuid>                        # Full detail
+gigstack invoices sat retry <uuid>                      # Retry stuck/errored XML download
+gigstack invoices sat pdf <uuid>                        # Generate and save PDF
+gigstack invoices sat pdf <uuid> --out ./invoices       # Custom output dir
+gigstack invoices sat download <uuid>                   # Convenience: PDF only (XML is web-only)
+```
+
+> The XML for SAT-downloaded CFDIs is not exposed via the API; it can only be downloaded from the web UI at `app.gigstack.pro/gastos`. The CLI's `pdf` and `download` commands generate the PDF on demand from the cached XML.
+
+#### Scheduled downloads
+
+```bash
+gigstack invoices sat schedule show                                # Current schedule + sync status
+gigstack invoices sat schedule history                             # Last 20 scheduled runs
+gigstack invoices sat schedule set --time 21:00 --types received --days-back 7
+gigstack invoices sat schedule set --enabled false --time 21:00 --types received --days-back 7
+```
+
+`set` requires the team to already have FIEL uploaded and the RFC registered with the SAT (both done from the web UI).
 
 ### Export
 

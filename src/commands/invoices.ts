@@ -361,4 +361,322 @@ export function registerInvoiceCommands(program: Command) {
         printPaginationHint(res);
       } catch (e: any) { error(e.message); }
     });
+
+  // Descarga Masiva SAT
+  const sat = invoices.command("sat").description("Descarga Masiva SAT — facturas recibidas y emitidas");
+
+  withListOpts(sat.command("list").description("Listar facturas descargadas del SAT"))
+    .option("--direction <dir>", "Dirección: issued (emitidas) o received (recibidas)")
+    .option("--status <status>", "Status SAT: Vigente o Cancelado")
+    .option("--type <code>", "Tipo de comprobante: I, E, P, N, T")
+    .option("--issuer-rfc <rfc>", "Filtrar por RFC del emisor")
+    .option("--receiver-rfc <rfc>", "Filtrar por RFC del receptor")
+    .action(async (opts) => {
+      try {
+        const query: Record<string, string> = { limit: opts.limit };
+        if (opts.next) query.starting_after = opts.next;
+        if (opts.from) query.from = opts.from;
+        if (opts.to) query.to = opts.to;
+        if (opts.direction) query.direction = opts.direction;
+        if (opts.status) query.status = opts.status;
+        if (opts.type) query.invoice_type = opts.type;
+        if (opts.issuerRfc) query.issuer_rfc = opts.issuerRfc;
+        if (opts.receiverRfc) query.receiver_rfc = opts.receiverRfc;
+
+        const res = await spin("Cargando facturas SAT…", () => api("GET", "/invoices/sat", { query, team: opts.team }));
+        const items = res.data || [];
+        if (isJsonMode()) return printJson(items);
+        printTable(
+          items.map((i: any) => ({
+            uuid: uid(i),
+            dir: i.direction === "issued" ? "emit" : "recib",
+            tipo: i.invoice_type || "—",
+            emisor: (i.issuer?.name || i.issuer?.rfc || "—").slice(0, 22),
+            receptor: (i.receiver?.name || i.receiver?.rfc || "—").slice(0, 22),
+            total: formatMoney(i.total, i.currency),
+            status: i.status || "—",
+            estado: i.resource_status || "—",
+            fecha: formatDate(i.issue_date),
+          })),
+        );
+        if (res.has_more && res.next) {
+          console.log(pc.dim(`\n... más resultados. Usa --next ${res.next} para la siguiente página`));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("get <uuid>")
+    .description("Ver detalle de una factura del SAT")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const res = await api("GET", `/invoices/sat/${uuid}`, { team: opts.team });
+        const i = res.data;
+        if (isJsonMode()) return printJson(i);
+        printKeyValue({
+          UUID: i.uuid || "—",
+          Dirección: i.direction === "issued" ? "Emitida" : "Recibida",
+          Tipo: i.invoice_type || "—",
+          "Estado XML": i.resource_status || "—",
+          "Tiene XML": i.has_xml ? "sí" : "no",
+          "Status SAT": i.status || "—",
+          "Emisor RFC": i.issuer?.rfc || "—",
+          "Emisor": i.issuer?.name || "—",
+          "Receptor RFC": i.receiver?.rfc || "—",
+          "Receptor": i.receiver?.name || "—",
+          Subtotal: formatMoney(i.subtotal, i.currency),
+          Total: formatMoney(i.total, i.currency),
+          "Tipo cambio": i.exchange_rate ?? "—",
+          Serie: i.series || "—",
+          Folio: i.folio || "—",
+          "Fecha emisión": formatDate(i.issue_date),
+          "Fecha timbrado": formatDate(i.stamp_date),
+          "Fecha cancelación": i.cancellation_date ? formatDate(i.cancellation_date) : "—",
+          "PAC RFC": i.pac_rfc || "—",
+          Versión: i.version || "—",
+          "No. certificado": i.certificate_number || "—",
+        });
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("retry <uuid>")
+    .description("Reintentar descarga del XML para facturas atascadas o con error")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const res = await spin("Reintentando descarga del XML…", () => api("POST", `/invoices/sat/${uuid}/retry-xml`, { team: opts.team }));
+        if (isJsonMode()) return printJson(res);
+        success(res.message || "XML descargado correctamente");
+        if (res.data?.credit_charged !== undefined) {
+          console.log(pc.dim(`  Crédito cobrado: ${res.data.credit_charged ? "sí" : "no"}`));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("pdf <uuid>")
+    .description("Generar y descargar el PDF de una factura del SAT")
+    .option("-o, --out <dir>", "Directorio de salida", ".")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${uuid}/pdf`, { team: opts.team }));
+        const pdfBase64 = res.pdf;
+        if (!pdfBase64) { error("La respuesta no contiene PDF"); return; }
+        const buf = Buffer.from(pdfBase64, "base64");
+        const path = join(opts.out, `${uuid}.pdf`);
+        writeFileSync(path, buf);
+        if (isJsonMode()) return printJson({ path, bytes: buf.length });
+        success(`PDF descargado: ${path}`);
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("download <uuid>")
+    .description("Descargar PDF de una factura del SAT (el XML solo se expone vía web app)")
+    .option("-o, --out <dir>", "Directorio de salida", ".")
+    .option("--team <id>", "Team ID")
+    .action(async (uuid, opts) => {
+      try {
+        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${uuid}/pdf`, { team: opts.team }));
+        const pdfBase64 = res.pdf;
+        if (!pdfBase64) { error("La respuesta no contiene PDF"); return; }
+        const buf = Buffer.from(pdfBase64, "base64");
+        const path = join(opts.out, `${uuid}.pdf`);
+        writeFileSync(path, buf);
+        if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_available: false });
+        success(`PDF descargado: ${path}`);
+        console.log(pc.dim("  Nota: el XML del SAT solo está disponible desde app.gigstack.pro/gastos"));
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("status")
+    .description("Ver estado de activación de Descarga Masiva SAT")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        const res = await api("GET", "/invoices/download/activate/status", { team: opts.team });
+        const d = res.data;
+        if (isJsonMode()) return printJson(d);
+
+        const statusLabel: Record<string, string> = {
+          active: "Activa",
+          needs_activation: "Lista para activar (incluida en su plan)",
+          needs_addon: "Requiere contratar add-on",
+          needs_upgrade: "Requiere actualizar su plan",
+        };
+
+        printKeyValue({
+          Estado: statusLabel[d.status] || d.status,
+          "Plan incluye función": d.planIncludesFeature ? "sí" : "no",
+          "Está activada": d.isActivated ? "sí" : "no",
+          "Precio por descarga": d.pricing?.perDownload || "—",
+          "Add-on mensual": d.pricing?.addonMonthly || "—",
+        });
+
+        console.log("");
+        if (d.status === "needs_activation" || d.status === "needs_addon") {
+          console.log(pc.dim("→ Ejecute 'gigstack invoices sat activate' para habilitar"));
+        } else if (d.status === "needs_upgrade") {
+          console.log(pc.dim("→ Actualice su plan en https://app.gigstack.pro/billing"));
+        } else if (d.status === "active") {
+          console.log(pc.dim("→ Descarga Masiva está habilitada. Use 'gigstack invoices sat list' para ver facturas"));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("activate")
+    .description("Activar Descarga Masiva SAT (agrega cargos a su suscripción)")
+    .option("-y, --yes", "Saltar confirmación")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        const statusRes = await spin("Consultando estado…", () => api("GET", "/invoices/download/activate/status", { team: opts.team }));
+        const d = statusRes.data;
+
+        if (d.status === "active") {
+          success("Descarga Masiva ya está activada para este RFC");
+          return;
+        }
+
+        if (d.status === "needs_upgrade") {
+          error("Su plan actual no permite agregar Descarga Masiva. Actualice su plan en https://app.gigstack.pro/billing");
+          return;
+        }
+
+        console.log(pc.bold("\nResumen de cargos:"));
+        console.log(`  Por descarga: ${d.pricing?.perDownload || "$0.20 MXN"}`);
+        if (d.status === "needs_addon") {
+          console.log(`  Add-on mensual: ${d.pricing?.addonMonthly || "$400 MXN/mes por RFC"}`);
+        } else {
+          console.log(pc.dim("  Su plan ya incluye la función — solo se cobra por descarga"));
+        }
+
+        if (!opts.yes) {
+          const proceed = await confirm("\n¿Activar Descarga Masiva SAT?");
+          if (!proceed) { console.log(pc.dim("Cancelado")); return; }
+        }
+
+        const res = await spin("Activando…", () => api("POST", "/invoices/download/activate", { team: opts.team }));
+        if (isJsonMode()) return printJson(res.data);
+        success(res.message || "Descarga Masiva activada");
+        if (res.data?.type) {
+          console.log(pc.dim(`  Tipo: ${res.data.type === "included" ? "incluida en plan" : "add-on"}`));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  sat
+    .command("deactivate")
+    .description("Desactivar Descarga Masiva SAT")
+    .option("-y, --yes", "Saltar confirmación")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        if (!opts.yes) {
+          const proceed = await confirm("¿Cancelar Descarga Masiva SAT? Se detendrán las descargas automáticas", false);
+          if (!proceed) { console.log(pc.dim("Cancelado")); return; }
+        }
+        const res = await spin("Desactivando…", () => api("POST", "/invoices/download/deactivate", { team: opts.team }));
+        if (isJsonMode()) return printJson(res);
+        success(res.message || "Descarga Masiva desactivada");
+      } catch (e: any) { error(e.message); }
+    });
+
+  // Schedule sub-group (read-only + history; saving requires multi-field config — defer to web UI)
+  const schedule = sat.command("schedule").description("Configuración de descarga automática programada");
+
+  schedule
+    .command("show")
+    .description("Ver configuración actual de descarga programada")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        const res = await api("GET", "/invoices/download/schedule", { team: opts.team });
+        const d = res.data;
+        if (isJsonMode()) return printJson(d);
+
+        const s = d.schedule;
+        printKeyValue({
+          "FIEL cargada": d.fiel_uploaded ? "sí" : "no",
+          "RFC registrado": d.registered ? "sí" : "no",
+          "SAT completado": d.sat_completed ? "sí" : "no",
+          "Inicio sincronización": d.sync_start_date || "—",
+          "Programación habilitada": s?.enabled ? "sí" : "no",
+          "Hora": s?.time || "—",
+          "Tipos de descarga": s?.downloadTypes?.join(", ") || "—",
+          "Días hacia atrás": s?.daysBack ?? "—",
+          "Última ejecución": s?.lastRunAt ? formatDate(s.lastRunAt) : "—",
+          "Status última corrida": s?.lastRunStatus || "—",
+        });
+        if (d.prodigia) {
+          console.log("");
+          console.log(pc.bold("Sincronización Prodigia/SAT:"));
+          printKeyValue({
+            "Sincronizado": d.prodigia.synced ? "sí" : "no",
+            "Desde": d.prodigia.sync_from || "—",
+            "Última sync": d.prodigia.last_sync || "—",
+            "Tope mensual": d.prodigia.monthly_cap ?? "—",
+          });
+          if (d.prodigia.message) console.log(pc.dim(`\n  ${d.prodigia.message}`));
+        }
+      } catch (e: any) { error(e.message); }
+    });
+
+  schedule
+    .command("history")
+    .description("Ver historial reciente de descargas programadas")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        const res = await spin("Cargando historial…", () => api("GET", "/invoices/download/schedule/history", { team: opts.team }));
+        const items = res.data?.history || [];
+        if (isJsonMode()) return printJson(items);
+        printTable(
+          items.map((h: any) => ({
+            id: (h.id || "—").slice(0, 12) + "…",
+            tipo: h.rfcType || "—",
+            inicio: h.startDate || "—",
+            fin: h.endDate || "—",
+            status: h.status || "—",
+            facturas: h.invoiceCount ?? 0,
+            procesadas: h.processedCount ?? 0,
+            origen: h.source || "—",
+            fecha: formatDate(h.createdAt),
+          })),
+        );
+      } catch (e: any) { error(e.message); }
+    });
+
+  schedule
+    .command("set")
+    .description("Configurar descarga automática programada")
+    .option("--enabled <bool>", "Habilitar (true/false)", "true")
+    .option("--time <HH:mm>", "Hora de ejecución diaria (ej: 21:00)")
+    .option("--types <list>", "Tipos a descargar (issued,received)", "issued,received")
+    .option("--days-back <n>", "Días hacia atrás a sincronizar (1-90)", "7")
+    .option("--team <id>", "Team ID")
+    .action(async (opts) => {
+      try {
+        if (!opts.time) { error("--time es requerido (formato HH:mm, ej: 21:00)"); process.exit(1); }
+        const downloadTypes = opts.types.split(",").map((t: string) => t.trim()).filter(Boolean);
+        const daysBack = parseInt(opts.daysBack, 10);
+        const enabled = String(opts.enabled).toLowerCase() !== "false";
+
+        const body = {
+          enabled,
+          time: opts.time,
+          download_types: downloadTypes,
+          days_back: daysBack,
+        };
+
+        const res = await spin("Guardando configuración…", () => api("PUT", "/invoices/download/schedule", { body, team: opts.team }));
+        if (isJsonMode()) return printJson(res.data);
+        success(res.message || "Configuración guardada");
+      } catch (e: any) { error(e.message); }
+    });
 }
