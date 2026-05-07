@@ -29,7 +29,7 @@ program
   .option("--json", "Salida en formato JSON")
   .option("--team <id>", "Team ID para operaciones multi-equipo")
   .hook("preAction", (thisCommand) => {
-    const opts = thisCommand.opts();
+    const opts = thisCommand.optsWithGlobals();
     if (opts.json) setJsonMode(true);
   });
 
