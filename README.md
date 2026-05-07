@@ -102,6 +102,20 @@ gigstack clients list --json
 gigstack invoices list --json --from 2026-01 --to 2026-03
 ```
 
+### List endpoints return paginated envelopes
+
+In `--json` mode, every list command returns:
+
+```json
+{ "data": [...], "has_more": false, "next": null, "total": 599 }
+```
+
+Pipe `next` back as `--next <token>` for the following page. `total` is the
+unfiltered server-side count when the API provides it (otherwise null).
+
+**Breaking change in 0.3.0**: previous versions returned a bare array. To keep
+existing scripts working, migrate to reading `.data` from the response.
+
 ## Commands reference
 
 ### Status and diagnostics

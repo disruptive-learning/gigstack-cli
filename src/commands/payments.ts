@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
 export function registerPaymentCommands(program: Command) {
@@ -26,7 +26,7 @@ export function registerPaymentCommands(program: Command) {
         if (opts.rfc) query.tax_id = opts.rfc;
         const res = await spin("Cargando pagos…", () => api("GET", "/payments", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((p: any) => ({
             id: p.id ? p.id.slice(0, 12) + "…" : "—",

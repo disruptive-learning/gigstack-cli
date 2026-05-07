@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import pc from "picocolors";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
@@ -30,7 +30,7 @@ export function registerInvoiceCommands(program: Command) {
         if (opts.series) query.series = opts.series;
         const res = await spin("Cargando facturas…", () => api("GET", "/invoices/income", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -231,7 +231,7 @@ export function registerInvoiceCommands(program: Command) {
       try {
         const res = await spin("Buscando facturas…", () => api("GET", "/invoices/search", { query: { q: query }, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -295,7 +295,7 @@ export function registerInvoiceCommands(program: Command) {
         const query = buildListQuery(opts);
         const res = await spin("Cargando borradores…", () => api("GET", "/invoices/draft", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -327,7 +327,7 @@ export function registerInvoiceCommands(program: Command) {
         const query = buildListQuery(opts);
         const res = await spin("Cargando notas de crédito…", () => api("GET", "/invoices/egress", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -347,9 +347,9 @@ export function registerInvoiceCommands(program: Command) {
       try {
         const query = buildListQuery(opts);
         if (opts.invoice) query.invoice_id = opts.invoice;
-        const res = await spin("Cargando complementos…", () => api("GET", "/invoices/complements", { query, team: opts.team }));
+        const res = await spin("Cargando complementos…", () => api("GET", "/invoices/payment", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -385,7 +385,7 @@ export function registerInvoiceCommands(program: Command) {
 
         const res = await spin("Cargando facturas SAT…", () => api("GET", "/invoices/sat", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((i: any) => ({
             uuid: uid(i),
@@ -635,7 +635,7 @@ export function registerInvoiceCommands(program: Command) {
       try {
         const res = await spin("Cargando historial…", () => api("GET", "/invoices/download/schedule/history", { team: opts.team }));
         const items = res.data?.history || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((h: any) => ({
             id: (h.id || "—").slice(0, 12) + "…",

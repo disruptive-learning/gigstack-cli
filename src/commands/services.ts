@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatMoney, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, spin } from "../output.js";
 import { ask } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
@@ -18,7 +18,7 @@ export function registerServiceCommands(program: Command) {
         const query = buildListQuery(opts);
         const res = await spin("Cargando servicios…", () => api("GET", "/services", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((s: any) => ({
             id: s.id ? s.id.slice(0, 12) + "…" : "—",

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode } from "../output.js";
 
 export function registerTeamCommands(program: Command) {
   const teams = program.command("teams").description("Gestionar equipos");
@@ -12,7 +12,7 @@ export function registerTeamCommands(program: Command) {
       try {
         const res = await api("GET", "/teams");
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((t: any) => ({
             id: t.id,

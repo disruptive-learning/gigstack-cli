@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { api } from "../api.js";
-import { printTable, printJson, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
+import { printTable, printJson, printListJson, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
 export function registerReceiptCommands(program: Command) {
@@ -20,7 +20,7 @@ export function registerReceiptCommands(program: Command) {
         if (opts.client) query.client_id = opts.client;
         const res = await spin("Cargando recibos…", () => api("GET", "/receipts", { query, team: opts.team }));
         const items = (res.data || []).filter((r: any) => r != null);
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((r: any) => ({
             id: r.id ? r.id.slice(0, 12) + "…" : "—",

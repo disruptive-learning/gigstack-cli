@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, spin } from "../output.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
 export function registerWebhookCommands(program: Command) {
@@ -16,7 +16,7 @@ export function registerWebhookCommands(program: Command) {
         const query = buildListQuery(opts);
         const res = await spin("Cargando webhooks…", () => api("GET", "/webhooks", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((w: any) => ({
             id: w.id ? w.id.slice(0, 12) + "…" : "—",

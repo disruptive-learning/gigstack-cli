@@ -14,6 +14,18 @@ export function printJson(data: any) {
   console.log(JSON.stringify(data, null, 2));
 }
 
+/** Print a list response as a paginated JSON envelope. Use in every command that
+ *  fetches a list when isJsonMode() is true. The bare-array shape from earlier
+ *  versions was lossy — callers had no way to paginate from --json output. */
+export function printListJson(res: any, items?: any[]) {
+  return printJson({
+    data: items ?? res?.data ?? [],
+    has_more: res?.has_more ?? false,
+    next: res?.next ?? null,
+    total: res?.total_results ?? null,
+  });
+}
+
 export function printTable(rows: Record<string, any>[], columns?: string[]) {
   if (jsonMode) return printJson(rows);
   if (rows.length === 0) {

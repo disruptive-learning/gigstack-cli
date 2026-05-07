@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
-import { printTable, printJson, printKeyValue, success, error, isJsonMode, formatDate, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatDate, spin } from "../output.js";
 import { ask, askRequired, select } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
 
@@ -27,7 +27,7 @@ export function registerClientCommands(program: Command) {
         const query = buildListQuery(opts);
         const res = await spin("Cargando clientes…", () => api("GET", "/clients", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((c: any) => ({
             id: c.id,
@@ -158,7 +158,7 @@ export function registerClientCommands(program: Command) {
       try {
         const res = await spin("Buscando clientes…", () => api("GET", "/clients/search", { query: { q: query }, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printJson(items);
+        if (isJsonMode()) return printListJson(res, items);
         printTable(
           items.map((c: any) => ({
             id: c.id,
