@@ -4,6 +4,13 @@ gigstack automates invoicing and revenue management for Mexican businesses. This
 
 Built on the [gigstack API](https://docs.gigstack.io).
 
+## What's new in 0.3.0
+
+- **Descarga Masiva SAT** — full read + hire surface from the terminal: `gigstack invoices sat status | activate | list | get | retry | pdf`. List your team's downloaded SAT mirror (received from suppliers) AND your own issued CFDIs, retry stuck XML downloads, generate PDFs, hire/cancel the service. See the [Descarga Masiva SAT](#descarga-masiva-sat) section.
+- **Paginated JSON envelopes** *(breaking)* — every list command in `--json` mode now returns `{ data, has_more, next, total }` instead of a bare array. Pipe `next` back as `--next <token>` to paginate. Migration: read `.data` on existing scripts.
+- **Agent-friendly fixes** — `--json` no longer leaks the spinner into stdout when piped; `gigstack invoices complements` works (was 405); `gigstack receipts list --client <id>` works (Firestore composite index now exists).
+- **Agent context** — `gigstack context descarga_masiva_sat` ships a full domain-knowledge topic for AI agents (concepts, statuses, actions, pricing, tips). `gigstack context --all --json` for one-shot bulk-load.
+
 ## Installation
 
 ```bash
