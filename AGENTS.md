@@ -15,7 +15,7 @@ This document tracks what's available today and what's coming.
 
 ## Today: phase 0 — manual unlock for early access
 
-If you want to sign up an agent right now, while we ship the public endpoint, **email us at `team@gigstack.io`** with:
+If you want to sign up an agent right now, while we ship the public endpoint, **email us at `support@gigstack.io`** with:
 
 - Your agent's intended use case (what it builds, who it serves)
 - The team email you want associated with the account
@@ -172,4 +172,4 @@ UI strings come back in Spanish but data field names are English.
 
 ## Want to chat?
 
-We're actively looking for the first 5 agent builders to use the API-only path in production. If you're building something interesting and want to influence the shape of phases 1-3, email `team@gigstack.io` or open an issue at <https://github.com/disruptive-learning/gigstack-cli/issues>.
+We're actively looking for the first 5 agent builders to use the API-only path in production. If you're building something interesting and want to influence the shape of phases 1-3, email `support@gigstack.io` or open an issue at <https://github.com/disruptive-learning/gigstack-cli/issues>.
