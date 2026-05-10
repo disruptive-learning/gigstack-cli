@@ -96,14 +96,13 @@ By default, agent-paid invoices are stamped under **público en general** (RFC g
 When the agent's owner needs to stamp invoices in their **own RFC**, the agent calls one endpoint and hands the resulting URL to the owner:
 
 ```http
-POST https://api.gigstack.io/v2/teams/{team_id}/onboarding-link
+GET https://api.gigstack.io/v2/teams/{team_id}/onboarding-url
 Authorization: Bearer <api-key OR mpp-receipt>
+
 → 200 OK
 {
-  "data": {
-    "onboarding_url": "https://embeded.gigstack.pro/?sessionId=...&c=...",
-    "expires_at": 1735603200000
-  }
+  "data": "https://embeded.gigstack.pro/?sessionId=...&c=...",
+  "message": "Onboarding URL retrieved successfully"
 }
 ```
 
@@ -126,12 +125,10 @@ async function stampInvoice(invoiceBody: InvoicePayload) {
 }
 
 async function escalateToFiscalMode(teamId: string) {
-  const res = await mpp.fetch(`https://api.gigstack.io/v2/teams/${teamId}/onboarding-link`, {
-    method: 'POST',
-  });
-  const { onboarding_url } = (await res.json()).data;
+  const res = await mpp.fetch(`https://api.gigstack.io/v2/teams/${teamId}/onboarding-url`);
+  const onboardingUrl = (await res.json()).data;
   // Show this URL to the human owner
-  await sendToOwner(`Para emitir facturas en tu RFC, sube tu e.firma aquí: ${onboarding_url}`);
+  await sendToOwner(`Para emitir facturas en tu RFC, sube tu e.firma aquí: ${onboardingUrl}`);
 }
 ```
 
@@ -244,7 +241,7 @@ For every list query, pass --json and read the `.data` field. Pagination is
 in `.next` — pipe it back as `--next <token>`. Discover flags with `--help`.
 
 When the user wants to stamp invoices in their own RFC (instead of público
-en general), call `gigstack teams onboarding-link` and surface the returned
+en general), call `gigstack teams onboarding-url` and surface the returned
 URL to the user. They click, upload their e.firma, and subsequent invoices
 stamp in their RFC automatically.
 
