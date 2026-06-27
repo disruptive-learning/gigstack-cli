@@ -5,7 +5,7 @@ import pc from "picocolors";
 import { api } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
-import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
+import { withListOpts, buildListQuery, printPaginationHint, parseDate } from "../list-opts.js";
 
 function uid(item: any): string {
   return item.uuid ? item.uuid.slice(0, 8) + "…" : item.id ? item.id.slice(0, 12) + "…" : "—";
@@ -375,8 +375,8 @@ export function registerInvoiceCommands(program: Command) {
       try {
         const query: Record<string, string> = { limit: opts.limit };
         if (opts.next) query.starting_after = opts.next;
-        if (opts.from) query.from = opts.from;
-        if (opts.to) query.to = opts.to;
+        if (opts.from) query.from = parseDate(opts.from);
+        if (opts.to) query.to = parseDate(opts.to, true);
         if (opts.direction) query.direction = opts.direction;
         if (opts.status) query.status = opts.status;
         if (opts.type) query.invoice_type = opts.type;
