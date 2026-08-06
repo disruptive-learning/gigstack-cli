@@ -334,12 +334,12 @@ const KNOWLEDGE: Record<string, ContextTopic> = {
       schedule:
         "Recurring config (time of day, types, days_back, enabled) that triggers downloads automatically. View/modify with 'gigstack invoices sat schedule show|set|history'.",
       activation_status:
-        "GET /v2/invoices/download/activate/status returns one of: 'active' (running), 'needs_activation' (plan includes feature, just enable), 'needs_addon' (paid plan without the feature — $400 MXN/mes per RFC + per-download), 'needs_upgrade' (free plan — must upgrade first).",
+        "GET /v2/invoices/download/activate/status returns one of: 'active' (running), 'needs_activation' (plan includes feature, just enable), 'needs_addon' (paid plan without the feature — per-download only, no monthly fee), 'needs_upgrade' (free plan — must upgrade first).",
     },
     statuses: {
       active: "Service hired and running. Scheduled downloads execute, retry endpoint works, billing is wired.",
       needs_activation: "Plan already includes Descarga Masiva — call 'sat activate' to enable. No extra charge.",
-      needs_addon: "Plan does NOT include the feature, but supports the add-on ($400 MXN/mes/RFC + $0.20 MXN per download). 'sat activate' will subscribe.",
+      needs_addon: "Plan does NOT include the feature, but can activate it. 'sat activate' subscribes the team to the $0.20 MXN per-download meter only — the $400 MXN/mes/RFC base fee was removed and pricing.addonMonthly now returns null.",
       needs_upgrade: "Free plan — must upgrade at app.gigstack.pro/billing before activation is possible.",
       ready: "On a single sat_invoice: hasXml === true, XML file is downloaded and parsed.",
       building: "On a single sat_invoice: download in flight or queued.",
@@ -369,7 +369,7 @@ const KNOWLEDGE: Record<string, ContextTopic> = {
       "XML files live under sat_invoices/{uuid}/files/{uuid} in Firestore — there is no API endpoint to fetch the raw XML, so 'sat download' only saves the PDF. Tell the user the XML is web-only.",
       "When 'sat retry' returns 422, the response.error field has the real Prodigia reason — surface it. 502 means the function timed out or the gateway failed; investigate logs.",
       "received invoices (gastos) are the high-value use case — they show what the team owes / has paid suppliers, and they enable expense reconciliation against bank movements.",
-      "Pricing changes per plan: free plan needs upgrade first; paid plan without the feature pays $400 MXN/mes per RFC + $0.20 MXN per download; plan with feature included only pays the per-download meter.",
+      "Pricing: free plan needs an upgrade first. Every paid plan pays the same $0.20 MXN per download and nothing else — there is no longer a monthly base fee for teams whose plan does not include the feature.",
     ],
   },
 };
