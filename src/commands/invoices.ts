@@ -550,8 +550,12 @@ export function registerInvoiceCommands(program: Command) {
 
         console.log(pc.bold("\nResumen de cargos:"));
         console.log(`  Por descarga: ${d.pricing?.perDownload || "$0.20 MXN"}`);
-        if (d.status === "needs_addon") {
-          console.log(`  Add-on mensual: ${d.pricing?.addonMonthly || "$400 MXN/mes por RFC"}`);
+        // addonMonthly is null since the monthly base fee was withdrawn — only
+        // print a line if the API ever reports a fee again.
+        if (d.pricing?.addonMonthly) {
+          console.log(`  Add-on mensual: ${d.pricing.addonMonthly}`);
+        } else if (d.status === "needs_addon") {
+          console.log(pc.dim("  Sin cuota mensual — solo se cobra por descarga"));
         } else {
           console.log(pc.dim("  Su plan ya incluye la función — solo se cobra por descarga"));
         }
