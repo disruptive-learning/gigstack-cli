@@ -882,3 +882,40 @@ gigstack integrations netsuite items save-rule TEAM_ID --file reviewed-rule.json
 ```
 
 El mapeo de artículos es compartido. `items get` lee la configuración sin consultar al proveedor; preview y guardado consultan el catálogo **live**, incluso con una credencial de prueba. Preview acepta `{rule,days?}`; `rule` contiene `match`, `matchType` (`exact`/`contains`), `itemId` como cadena numérica y opcionalmente `refundItemId`/`scope` (`domestic`/`foreign`). `days` admite 1–180. Guardar exige el `previewToken` vigente y la misma regla/ventana revisada. Mover líneas existentes exige `confirmChanges:true` explícito en el JSON; `--yes` no lo agrega. Un 409 requiere leer el estado y repetir el preview, no reutilizar una revisión obsoleta.
+
+### Cuenta de facturación y suscripción
+
+```bash
+gigstack billing summary TEAM_ID --json
+gigstack billing plans TEAM_ID --json
+gigstack billing history TEAM_ID --limit 20 --json
+gigstack billing history TEAM_ID --cursor CURSOR --json
+gigstack billing fiscal get TEAM_ID --json
+```
+
+Requiere usuario Firebase o MCP personal. Leer conserva permisos de miembro; los cambios requieren administración de la cuenta de facturación. Los efectos son compartidos por toda esa cuenta. El ambiente lo determina el servidor y la configuración de facturación; una credencial de prueba no selecciona por sí sola sandbox. Las fechas del proveedor están en segundos y los importes en unidades menores; los tiempos de operaciones están en milisegundos. `history` conserva `data.has_more` y `data.cursor`.
+
+Cada cambio exige un **UUID v4 elegido una sola vez**, un diario local y confirmación:
+
+```bash
+# Genera una sola vez y conserva el ID junto a los parámetros revisados.
+uuidgen
+# Sustituye OPERATION_UUID por ese mismo UUID, también al reintentar.
+gigstack billing checkout TEAM_ID --operation-id OPERATION_UUID --operation-file ./checkout-operation.json --file checkout.json --yes --json
+gigstack billing upgrade TEAM_ID --operation-id OPERATION_UUID --operation-file ./upgrade-operation.json --file upgrade.json --yes --json
+gigstack billing portal TEAM_ID --operation-id OPERATION_UUID --operation-file ./portal-operation.json --data '{"intent":"cancel_subscription"}' --yes --json
+gigstack billing fiscal update TEAM_ID --operation-id OPERATION_UUID --operation-file ./fiscal-operation.json --file billing-fiscal.json --yes --json
+```
+
+Usa un UUID/diario distinto para cada **operación nueva**; los ejemplos no se ejecutan todos con un mismo UUID. El CLI nunca genera un ID nuevo durante un reintento. El diario se escribe y sincroniza antes del cambio, con permisos `0600`; guarda ID/equipo/cuenta/ambiente/URL base y SHA-256 del contenido, sin datos fiscales, credenciales ni enlaces de Checkout/Portal. Rechaza cambios de cuerpo, equipo, cuenta, ambiente o API para un diario existente. Al repetir un comando idéntico consulta primero la operación: si existe, devuelve su estado sin reenviar el cambio. Si no existe (404), puede enviar el cuerpo original con el **mismo ID**. Una respuesta no recibida conserva `operation_reference.id` y el diario; no se reintenta automáticamente.
+
+Checkout acepta `plan_id`, `billing_cycle` (`monthly`/`annual`) y opcionalmente `plan_version`, `quantity` (1–10000), `intro`, `trial_id`, `partner_ref`, `coupon`; `intro:true` y `trial_id` son excluyentes. Upgrade admite `plan_id`, `billing_cycle`, `quantity` y puede generar una factura prorrateada inmediata. Checkout gratuito se aplica inmediatamente; Checkout de pago entrega un enlace que la persona debe completar. Portal admite `intent` (`manage`, `cancel_subscription`, `update_payment_method`); crear el enlace **no** confirma que se canceló la suscripción o cambió la tarjeta. Trata los enlaces devueltos como privados.
+
+La actualización fiscal usa `{fiscal:{legal_name,rfc,tax_system,use,email?,phone?,address:{zip,street?,exterior?,interior?,neighborhood?,municipality?,city?,state?,country?}}}`. Los campos opcionales admiten `null`; ZIP debe ser una cadena de cinco dígitos. No incluyas `operation_id` en ese JSON: se toma exclusivamente de `--operation-id`.
+
+```bash
+gigstack billing operations get TEAM_ID OPERATION_UUID --json
+gigstack billing operations reconcile TEAM_ID OPERATION_UUID --json
+```
+
+`processing` y `handoff_ready` describen estados pendientes, no finalización. `failed` y `outcome_unknown` salen con código 1 y conservan el resultado/error de la operación. `reconcile` consulta evidencia sin repetir cargos ni escrituras del proveedor. `stripe_synced:false` conserva un guardado fiscal parcial. La liberación de un resultado incierto requiere inicio de sesión Firebase y reconocimiento humano explícito; no hay comando de agente `resolve`.

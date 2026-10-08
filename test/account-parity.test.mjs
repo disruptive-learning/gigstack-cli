@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile, readFile, stat, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, stat, rm, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -497,4 +497,87 @@ test('provider preview is required and unknown fields, malformed rules, mode ove
   ];
   for(const args of cases){const r=await f.run(['integrations',...args,'--json']);assert.equal(r.code,1);assert.ok(json(r).error);}
   assert.equal(f.requests.length,0);
+});
+
+const billingUuid = '12345678-1234-4123-8123-123456789012';
+const billingScope = {team_id:'team_b',billing_account_id:'ba_1',provider_environment:'sandbox',can_manage:true,effect_scope:'billing_account_shared'};
+const billingOperation = {id:billingUuid,...billingScope,action:'checkout',status:'handoff_ready',result:{kind:'checkout',url:'https://example.invalid/private-handoff'},error:null};
+
+test('billing read routes retain nested pagination and operation uncertainty returns nonzero',async t=>{
+  const f=await fixture(t,req=>req.url.includes('/operations/')?{data:{...billingOperation,status:'outcome_unknown',result:{kind:'fiscal',fiscal:{stripe_synced:false}}}}:{data:{...billingScope,data:[],has_more:true,cursor:'opaque_cursor'}});
+  const cases=[
+    [['billing','summary','team_b'],'GET','/summary'],[['billing','plans','team_b'],'GET','/plans'],
+    [['billing','history','team_b','--limit','10','--cursor','opaque_cursor'],'GET','/history?limit=10&cursor=opaque_cursor'],
+    [['billing','fiscal','get','team_b'],'GET','/fiscal'],
+    [['billing','operations','get','team_b',billingUuid],'GET',`/operations/${billingUuid}`],
+    [['billing','operations','reconcile','team_b',billingUuid],'POST',`/operations/${billingUuid}/reconcile`],
+  ];
+  for(const [args,method,path]of cases){const r=await f.run([...args,'--json']);assert.equal(r.code,path.includes('/operations/')?1:0,r.stderr);assert.equal(f.requests.at(-1).method,method);assert.equal(f.requests.at(-1).url,'/v2/teams/team_b/billing'+path);const data=json(r).data;if(path.includes('/operations/'))assert.equal(data.result.fiscal.stripe_synced,false);else{assert.equal(data.has_more,true);assert.equal(data.cursor,'opaque_cursor');}}
+});
+
+test('billing writes persist private journals before request, omit PII/URLs and retain caller operation UUID',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const f=await fixture(t,req=>({data:req.url.endsWith('/summary')?billingScope:billingOperation}));
+  const cases=[
+    ['checkout',{plan_id:'pro',billing_cycle:'monthly',intro:false}],
+    ['upgrade',{plan_id:'business',billing_cycle:'annual',quantity:2}],
+    ['portal',{intent:'cancel_subscription'}],
+    ['fiscal',{fiscal:{legal_name:'PRIVATE-FISCAL-NAME',rfc:'AAA010101AAA',tax_system:'601',use:'G03',email:null,address:{zip:'01234',street:null}}}],
+  ];
+  for(const[action,body]of cases){
+    const journal=join(dir,`${action}.json`),args=action==='fiscal'?['billing','fiscal','update','team_b']:['billing',action,'team_b'];
+    const r=await f.run([...args,'--operation-id',billingUuid,'--operation-file',journal,'--data',JSON.stringify(body),'--yes','--json']);assert.equal(r.code,0,r.stderr);
+    assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(json(r).data.status,'handoff_ready');
+    const saved=await readFile(journal,'utf8');assert.ok(!saved.includes('PRIVATE-FISCAL-NAME'));assert.ok(!saved.includes('private-handoff'));assert.ok(!saved.includes('synthetic-test-token'));
+    assert.equal((await stat(journal)).mode&0o777,0o600);assert.equal(JSON.parse(saved).billing_account_id,'ba_1');assert.equal(JSON.parse(saved).provider_environment,'sandbox');
+    assert.deepEqual(JSON.parse(f.requests.at(-1).body),{...body,operation_id:billingUuid});assert.equal(f.requests.at(-1).method,action==='fiscal'?'PATCH':'POST');
+  }
+});
+
+test('identical billing journal reads operation before retry; mismatched scope/body never writes',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-retry-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'operation.json');let providerEnvironment='sandbox';
+  const f=await fixture(t,req=>({data:req.url.endsWith('/summary')?{...billingScope,provider_environment:providerEnvironment}:billingOperation}));
+  const args=['billing','checkout','team_b','--operation-id',billingUuid,'--operation-file',journal,'--data','{"plan_id":"pro","billing_cycle":"monthly"}','--yes','--json'];
+  assert.equal((await f.run(args)).code,0);assert.equal((await f.run(args)).code,0);
+  assert.deepEqual(f.requests.map(r=>r.method),['GET','POST','GET','GET']);assert.ok(f.requests.at(-1).url.endsWith(`/operations/${billingUuid}`));
+  const changed=[...args];changed[changed.indexOf('--data')+1]='{"plan_id":"business","billing_cycle":"monthly"}';assert.equal((await f.run(changed)).code,1);
+  providerEnvironment='production';assert.equal((await f.run(args)).code,1);
+  assert.equal(f.requests.filter(r=>r.method==='POST').length,1);
+});
+
+test('billing transport uncertainty keeps journal and operation reference, never generates a new ID',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-timeout-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'operation.json');
+  const f=await fixture(t,req=>req.url.endsWith('/summary')?{data:billingScope}:{delay:150,data:billingOperation});
+  const args=['billing','portal','team_b','--operation-id',billingUuid,'--operation-file',journal,'--data','{"intent":"manage"}','--yes','--json'];
+  const r=await f.run(args,{env:{GIGSTACK_API_TIMEOUT_MS:'40'}});assert.equal(r.code,1);assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(json(r).error.outcome,'unknown');
+  assert.equal(JSON.parse(await readFile(journal,'utf8')).operation_id,billingUuid);assert.equal(f.requests.filter(r=>r.method==='POST').length,1);
+});
+
+test('billing invalid inputs, missing confirmation and browser-only resolve make no network request or journal',async t=>{
+  const f=await fixture(t);const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-invalid-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'never-created.json');
+  const common=['--operation-id',billingUuid,'--operation-file',journal,'--json'];
+  const cases=[
+    ['billing','upgrade','team_b','--data','{"plan_id":"pro","billing_cycle":"monthly"}',...common],
+    ['billing','checkout','team_b','--data','{"plan_id":"pro","billing_cycle":"monthly","intro":true,"trial_id":"trial1"}','--yes',...common],
+    ['billing','portal','team_b','--data','{"intent":"manage","return_url":"https://evil.invalid"}','--yes',...common],
+    ['billing','portal','team_b','--team','other','--data','{"intent":"manage"}','--yes',...common],
+    ['billing','operations','resolve','team_b',billingUuid,'--json'],
+  ];
+  for(const args of cases){const r=await f.run(args);assert.equal(r.code,1);assert.ok(json(r).error);}
+  assert.equal(f.requests.length,0);await assert.rejects(stat(journal));
+});
+
+test('billing journal failure prevents provider write and still returns recovery UUID metadata',async t=>{
+  const f=await fixture(t,()=>({data:billingScope}));const dir=await mkdtemp(join(tmpdir(),'gigstack-journal-fail-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const r=await f.run(['billing','portal','team_b','--operation-id',billingUuid,'--operation-file',join(dir,'missing','journal.json'),'--data','{"intent":"manage"}','--yes','--json']);
+  assert.equal(r.code,1);assert.equal(json(r).operation_reference.id,billingUuid);assert.deepEqual(f.requests.map(r=>r.method),['GET']);
+});
+
+test('billing retry only resends original UUID/body after a verified 404 readback',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-notfound-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'operation.json');let writes=0;
+  const f=await fixture(t,req=>req.url.endsWith('/summary')?{data:billingScope}:req.method==='GET'?{status:404,error:{code:'not_found',message:'Operation not found'}}:++writes===1?{status:503,error:{code:'unavailable',message:'Unavailable'}}:{data:{...billingOperation,status:'completed'}});
+  const args=['billing','portal','team_b','--operation-id',billingUuid,'--operation-file',journal,'--data','{"intent":"manage"}','--yes','--json'];
+  assert.equal((await f.run(args)).code,1);assert.equal((await f.run(args)).code,0);
+  assert.deepEqual(f.requests.map(r=>r.method),['GET','POST','GET','GET','POST']);assert.equal(f.requests[1].body,f.requests[4].body);
+  await chmod(journal,0o644);assert.equal((await f.run(args)).code,1);assert.equal(f.requests.filter(r=>r.method==='POST').length,2);
 });
