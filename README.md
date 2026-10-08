@@ -708,3 +708,53 @@ Review and explicitly confirm the new amount before retrying; the CLI never
 silently accepts a changed cost. Cancelling a job does not undo completed
 work or charges. `teams onboarding-url --yes` likewise acknowledges a
 mutation: generating the link refreshes the CSD portal password/challenge.
+
+### Flujos y Google Sheets
+
+`journeys` ofrece `list`, `catalog`, `get`, `create`, `update`, `delete`, `publish`,
+`pause`, `clone`, `test` y `runs`. `journey-groups` ofrece `list`, `get`, `create`,
+`update`, `clone`, `revert`, `publish` y `pause`. Usa `--file`, `--stdin` o `--data`
+para los cuerpos JSON; los comandos de lectura conservan el sobre de paginación.
+La credencial determina el ambiente del recurso. El campo `targetLivemode` de
+`clone` selecciona el ambiente de la copia, que siempre comienza como borrador.
+
+```bash
+gigstack journeys catalog --team TEAM_ID --json
+gigstack journeys create --file journey.json --team TEAM_ID --json
+gigstack journeys publish JOURNEY_ID --yes --team TEAM_ID --json
+gigstack journey-groups get GROUP_ID --team TEAM_ID --json
+gigstack journey-groups update GROUP_ID --file group-edit.json --yes --team TEAM_ID --json
+```
+
+Al editar un grupo, `journeys` es la lista completa del resultado: los flujos
+omitidos se archivan. Incluye `expectedLastUpdated` con el `last_updated` leído
+por `get`, también al usar `revert`. Ante `409 group_changed`, vuelve a leer y
+revisa los cambios antes de intentar otra vez. La publicación y pausa de grupos
+operan por flujo: si alguno falla, la CLI conserva todos los resultados y sale
+con código `1`. No repitas automáticamente la operación completa.
+
+`sheets` ofrece `status`, `fields payment|invoice`, `headers`, `rows`, `connect`,
+`mapping`, `preview`, `enable`, `pause`, `sync` y `disconnect`.
+
+```bash
+gigstack sheets status --team TEAM_ID --json
+gigstack sheets fields payment --team TEAM_ID --json
+gigstack sheets connect --file sheet-connection.json --yes --team TEAM_ID --json
+gigstack sheets mapping --file sheet-mapping.json --team TEAM_ID --json
+gigstack sheets preview --team TEAM_ID --json
+gigstack sheets enable --yes --team TEAM_ID --json
+```
+
+`connect` recibe `{ "url": "https://docs.google.com/spreadsheets/d/ID/edit" }`,
+y opcionalmente `sheet_name`, `header_row` (1–50) y `copy_from_other`. Requiere
+una credencial de usuario Firebase/MCP cuyo correo tenga acceso directo de
+propietario/editor en Drive. Una clave API/OAuth puede gestionar una conexión
+existente y conserva al usuario que autorizó la importación. El importador
+vuelve a comprobar los permisos de ese usuario al procesar filas.
+
+`mapping` recibe `target` (`payment` o `invoice`), `fields` (ruta de campo a
+`{column}` o `{value}`) y `poll_interval_minutes` opcional (2 o 5). Guardarlo
+pausa la importación. `preview` valida sin crear documentos; `enable` y `sync`
+pueden iniciar la creación de documentos y requieren `--yes` sin terminal
+interactiva. `headers` actualiza la caché de encabezados. `rows` y `journeys runs`
+devuelven las últimas 50 entradas, sin cursor.

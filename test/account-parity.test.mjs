@@ -243,3 +243,70 @@ test('billed GET timeout has unknown outcome and semantic failures return nonzer
   let r=await f.run(['invoices','sat','fetch-xml','uuid_a','--yes','--json'],{env:{GIGSTACK_API_TIMEOUT_MS:'70'}});assert.equal(r.code,1);assert.equal(json(r).error.outcome,'unknown');
   r=await f.run(['users','get','user_a','--json']);assert.equal(r.code,1);assert.equal(json(r).error.code,'operation_failed');
 });
+
+test('automation commands map every customer route and preserve team, mode selectors and optimistic locks', async t => {
+  const f = await fixture(t, () => ({ success: true, data: { id: 'fixture', results: [] }, has_more: true, next: 'cursor' }));
+  const graph = { nodes: [{ id: 'n1', type: 'trigger.payment_succeeded', position: { x: 0, y: 0 }, data: { config: { enabled: false } } }], edges: [], viewport: null };
+  const body = { name: 'Fixture flow', graph, replacesDefaults: false };
+  const groupEdit = { expectedLastUpdated: 1720000000000, journeys: [] };
+  const cases = [
+    [['journeys','list','--status','draft','--trigger-type','trigger.payment_succeeded','--next','cursor'], 'GET','/v2/journeys',undefined],
+    [['journeys','catalog'], 'GET','/v2/journeys/catalog',undefined],
+    [['journeys','get','j1'], 'GET','/v2/journeys/j1',undefined],
+    [['journeys','runs','j1'], 'GET','/v2/journeys/j1/runs',undefined],
+    [['journeys','create','--stdin'], 'POST','/v2/journeys',body],
+    [['journeys','update','j1','--stdin'], 'PUT','/v2/journeys/j1',body],
+    [['journeys','delete','j1','--yes'], 'DELETE','/v2/journeys/j1',undefined],
+    [['journeys','publish','j1','--yes'], 'POST','/v2/journeys/j1/publish',{}],
+    [['journeys','pause','j1','--yes'], 'POST','/v2/journeys/j1/pause',{}],
+    [['journeys','clone','j1','--stdin'], 'POST','/v2/journeys/j1/clone',{ targetLivemode: true, name: 'Copy' }],
+    [['journeys','test','j1','--stdin'], 'POST','/v2/journeys/j1/test',{ source_collection: 'payments', source_snapshot: { amount: 0 } }],
+    [['journey-groups','list','--created-from','ai'], 'GET','/v2/journey-groups',undefined],
+    [['journey-groups','get','g1'], 'GET','/v2/journey-groups/g1',undefined],
+    [['journey-groups','create','--stdin'], 'POST','/v2/journey-groups',{ name: 'Group', journeys: [{ name: 'Flow', graph }] }],
+    [['journey-groups','update','g1','--stdin','--yes'], 'PUT','/v2/journey-groups/g1',groupEdit],
+    [['journey-groups','revert','g1','--stdin','--yes'], 'POST','/v2/journey-groups/g1/revert',{ expectedLastUpdated: 1720000000000 }],
+    [['journey-groups','clone','g1'], 'POST','/v2/journey-groups/g1/clone',{}],
+    [['journey-groups','publish','g1','--yes'], 'POST','/v2/journey-groups/g1/publish',{}],
+    [['journey-groups','pause','g1','--yes'], 'POST','/v2/journey-groups/g1/pause',{}],
+    [['sheets','status'], 'GET','/v2/sheets',undefined],
+    [['sheets','fields','payment'], 'GET','/v2/sheets/fields',undefined],
+    [['sheets','headers'], 'GET','/v2/sheets/headers',undefined],
+    [['sheets','rows','--status','error,review'], 'GET','/v2/sheets/rows',undefined],
+    [['sheets','connect','--stdin','--yes'], 'POST','/v2/sheets/connect',{ url: 'https://docs.google.com/spreadsheets/d/fixture/edit', copy_from_other: true }],
+    [['sheets','mapping','--stdin'], 'PUT','/v2/sheets/mapping',{ target: 'payment', fields: { currency: { value: 'MXN' } }, poll_interval_minutes: 2 }],
+    [['sheets','preview'], 'POST','/v2/sheets/preview',{}],
+    ...['enable','pause','sync'].map(action => [['sheets',action,'--yes'],'POST',`/v2/sheets/${action}`,{}]),
+    [['sheets','disconnect','--yes'], 'DELETE','/v2/sheets',{}],
+  ];
+  for (const [args,method,path,payload] of cases) {
+    const r = await f.run([...args,'--team','team_fixture','--json'], { input: payload === undefined ? '' : JSON.stringify(payload) });
+    assert.equal(r.code, 0, `${args.join(' ')}: ${r.stderr}`);
+    assert.equal(json(r).success, true);
+    const req = f.requests.at(-1), url = new URL(req.url,f.base);
+    assert.equal(req.method, method); assert.equal(url.pathname,path); assert.equal(url.searchParams.get('team'),'team_fixture');
+    if (payload !== undefined) assert.deepEqual(JSON.parse(req.body), payload);
+    if (args[0] === 'journeys' && args[1] === 'list') {
+      assert.equal(url.searchParams.get('triggerType'),'trigger.payment_succeeded');
+      assert.equal(url.searchParams.get('next'),'cursor'); assert.equal(json(r).next,'cursor');
+    }
+  }
+  assert.equal(f.requests.length, 30);
+});
+
+test('automation activation, group replacement and deletion require explicit noninteractive confirmation', async t => {
+  const f = await fixture(t);
+  for (const args of [ ['journeys','publish','j1'], ['journeys','delete','j1'], ['journey-groups','update','g1','--data','{"journeys":[],"expectedLastUpdated":1}'], ['journey-groups','revert','g1','--data','{"expectedLastUpdated":1}'], ['sheets','connect','--data','{"url":"https://example.test"}'], ['sheets','enable'], ['sheets','sync'], ['sheets','disconnect'] ]) {
+    const r = await f.run([...args,'--json']); assert.equal(r.code,1); assert.ok(json(r).error);
+  }
+  assert.equal(f.requests.length,0);
+});
+
+test('partial group failures exit nonzero with every per-flow result; stale revisions never retry', async t => {
+  const results = [{ journeyId: 'j1', status: 'published' }, { journeyId: 'j2', status: 'failed', errors: ['Invalid graph'] }];
+  const f = await fixture(t, req => req.url.includes('/publish') ? { success: true, data: { results } } : { status: 409, success: false, error: { code: 'group_changed', message: 'Reload before editing' } });
+  const partial = await f.run(['journey-groups','publish','g1','--yes','--json']);
+  assert.equal(partial.code,1); assert.equal(json(partial).error.code,'partial_failure'); assert.deepEqual(json(partial).data.results,results);
+  const stale = await f.run(['journey-groups','revert','g1','--data','{"expectedLastUpdated":1}','--yes','--json']);
+  assert.equal(stale.code,1); assert.equal(json(stale).error.code,'group_changed'); assert.equal(f.requests.length,2);
+});
