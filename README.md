@@ -952,3 +952,14 @@ gigstack invoices payment-get PAYMENT_COMPLEMENT_ID --team TEAM_ID --json
 ```
 
 Los respaldos vinculados admiten además `payment_confirmation` y `subscription_info`, con `--name`/`--description` opcionales. Sus listas conservan la respuesta completa y no ofrecen cursor. `invoices payment-get` lee un CFDI tipo P (complemento de pago), no una factura de ingreso ni una lista de cobros relacionados.
+
+
+Para expirar un Checkout que todavía está abierto, conserva un **nuevo** UUID y diario distintos del Checkout original:
+
+```bash
+gigstack billing operations cancel-checkout TEAM_ID CHECKOUT_OPERATION_ID --operation-id NEW_UUID_V4 --operation-file ./checkout-cancel.json --yes --json
+gigstack billing operations get TEAM_ID NEW_UUID_V4 --json
+gigstack billing operations reconcile TEAM_ID NEW_UUID_V4 --json
+```
+
+El diario vincula la cancelación al Checkout original y a la cuenta/ambiente real. Reutilizar el mismo diario consulta primero el nuevo UUID. Un resultado `outcome_unknown` sale con código 1; consulta o concilia ese UUID antes de otra acción. Solo la expiración confirmada cancela el Checkout. Si ya fue completado, la cancelación falla y la suscripción se administra en el portal de facturación.

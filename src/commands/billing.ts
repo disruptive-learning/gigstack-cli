@@ -38,14 +38,19 @@ function show(result: any, reference?: OperationReference) {
   if (unsuccessful) process.exitCode = 1;
   printJson({ ...result, ...(unsuccessful ? { success: false, error: { code: state, message: "La operación no está confirmada como completada. Revisa data y consulta el mismo ID antes de continuar." } } : {}), ...(reference ? { operation_reference: reference } : {}) });
 }
-async function write(action: BillingWrite, teamId: string, opts: any) {
+async function write(action: BillingWrite | "checkout.cancel", teamId: string, opts: any, checkoutId?: string) {
   const id = operationId(opts.operationId);
   const reference = { id, team_id: teamId, journal_file: resolve(opts.operationFile) };
   try {
-    const path = `${base(teamId)}/${action}`, baseUrl = apiBaseUrl();
+    const originalId = action === "checkout.cancel" ? operationId(checkoutId!) : undefined;
+    if (originalId === id) throw new Error("La cancelación necesita un operation-id diferente al Checkout original");
+    const path = originalId ? `${base(teamId)}/operations/${originalId}/cancel` : `${base(teamId)}/${action}`, baseUrl = apiBaseUrl();
     getApiKey(); // Fail before creating a journal if authentication is unavailable.
-    const input = await readJsonInput(opts); validate(action, input);
-    await requireConfirmation(opts.yes, action === "upgrade"
+    const input = action === "checkout.cancel" ? {} : await readJsonInput(opts);
+    if (action !== "checkout.cancel") validate(action, input);
+    await requireConfirmation(opts.yes, action === "checkout.cancel"
+      ? "¿Expirar el Checkout abierto de la cuenta compartida? No cancela una suscripción ya creada. Si el resultado es incierto, consulta o concilia el nuevo ID de cancelación."
+      : action === "upgrade"
       ? "¿Cambiar el plan de la cuenta de facturación compartida? Puede generar una factura prorrateada inmediata."
       : action === "checkout" ? "¿Iniciar cambio de plan para la cuenta compartida? Un plan gratuito se aplica inmediatamente; Checkout de pago requiere acción de la persona."
       : action === "portal" ? "¿Crear acceso al portal de la cuenta compartida? Crear el enlace no cancela la suscripción ni cambia el método de pago."
@@ -87,6 +92,12 @@ export function registerBillingCommands(program: Command) {
       .action(async (id, opts) => write(action, id, opts));
   }
   const operations = billing.command("operations").description("Readback y conciliación; ninguna acción repite un cobro ni libera el bloqueo incierto");
+  operations.command("cancel-checkout <teamId> <checkoutOperationId>")
+    .description("Expirar el Checkout original; un Checkout ya completado no revierte la suscripción")
+    .requiredOption("--operation-id <uuid>", "NUEVO UUID v4 estable para la cancelación, distinto del Checkout")
+    .requiredOption("--operation-file <path>", "Diario privado 0600 de esta cancelación; conserva el mismo al consultar/reintentar")
+    .option("-y, --yes", "Confirmar expiración del Checkout de la cuenta compartida")
+    .action(async (team, checkout, opts) => write("checkout.cancel", team, opts, checkout));
   operations.command("get <teamId> <operationId>")
     .action(async (team, id) => show(await api("GET", `${base(team)}/operations/${operationId(id)}`)));
   operations.command("reconcile <teamId> <operationId>").description("Consultar evidencia del proveedor sin repetir la operación")

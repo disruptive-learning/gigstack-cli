@@ -622,3 +622,25 @@ test('document unsafe identifiers, inert AI flags, unconfirmed uploads and overs
   ];
   for(const args of cases){const r=await f.run([...args,'--json']);assert.equal(r.code,1);assert.ok(json(r).error);}assert.equal(f.requests.length,0);
 });
+
+
+test('checkout cancellation binds original checkout in its private journal and reads new intent before retry',async t=>{
+  const original='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333';
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-cancel-checkout-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'cancel.json');
+  const result={id:billingUuid,action:'checkout.cancel',status:'completed',result:{kind:'checkout_cancellation',checkout_operation_id:original,session_id:'synthetic_session',status:'expired'}};
+  const f=await fixture(t,req=>({data:req.url.endsWith('/summary')?billingScope:result}));
+  const args=['billing','operations','cancel-checkout','team_b',original,'--operation-id',billingUuid,'--operation-file',journal,'--yes','--json'];
+  let r=await f.run(args);assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r).data,result);assert.equal(json(r).operation_reference.id,billingUuid);
+  assert.equal(f.requests.at(-1).url,`/v2/teams/team_b/billing/operations/${original}/cancel`);assert.deepEqual(JSON.parse(f.requests.at(-1).body),{operation_id:billingUuid});
+  const saved=JSON.parse(await readFile(journal,'utf8'));assert.ok(saved.path.includes(original));assert.equal(saved.operation_id,billingUuid);assert.equal((await stat(journal)).mode&0o777,0o600);
+  r=await f.run(args);assert.equal(r.code,0);assert.equal(f.requests.at(-1).url,`/v2/teams/team_b/billing/operations/${billingUuid}`);assert.equal(f.requests.filter(q=>q.method==='POST').length,1);
+  const changed=[...args];changed[4]=other;assert.equal((await f.run(changed)).code,1);assert.equal(f.requests.filter(q=>q.method==='POST').length,1);
+});
+
+test('checkout cancellation rejects reused UUID or absent confirmation locally, keeps uncertainty nonzero',async t=>{
+  const original='22222222-2222-4222-8222-222222222222';const dir=await mkdtemp(join(tmpdir(),'gigstack-cancel-unknown-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'cancel.json');
+  const f=await fixture(t,req=>({data:req.url.endsWith('/summary')?billingScope:{id:billingUuid,action:'checkout.cancel',status:'outcome_unknown',result:null}}));
+  const args=['billing','operations','cancel-checkout','team_b',original,'--operation-id',billingUuid,'--operation-file',journal,'--json'];
+  assert.equal((await f.run(args)).code,1);const same=[...args];same[6]=original;assert.equal((await f.run([...same,'--yes'])).code,1);assert.equal(f.requests.length,0);await assert.rejects(stat(journal));
+  const r=await f.run([...args,'--yes']);assert.equal(r.code,1);assert.equal(json(r).data.status,'outcome_unknown');assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(f.requests.filter(q=>q.method==='POST').length,1);
+});
