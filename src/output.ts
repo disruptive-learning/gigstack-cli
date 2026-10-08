@@ -75,7 +75,9 @@ export function error(value: unknown) {
   pendingSuccess = undefined;
   const e = value as any;
   const message = typeof value === "string" ? value : e?.message ?? "Error desconocido";
-  if (jsonMode) printJson({ error: { message, ...(e?.status ? { status: e.status } : {}), ...(e?.code ? { code: e.code } : {}), ...(e?.outcome ? { outcome: e.outcome } : {}) } });
+  const cost = e?.body?.data;
+  const details = cost && typeof cost.estimated_cost_mxn === "number" ? { estimated_cost_mxn: cost.estimated_cost_mxn, ...(typeof cost.importable === "number" ? { importable: cost.importable } : {}) } : undefined;
+  if (jsonMode) printJson({ error: { message, ...(details ? { details } : {}), ...(e?.status ? { status: e.status } : {}), ...(e?.code ? { code: e.code } : {}), ...(e?.outcome ? { outcome: e.outcome } : {}) } });
   else console.error(pc.red(`✗ ${message}`));
 }
 

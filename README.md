@@ -329,10 +329,10 @@ gigstack invoices sat get <uuid>                        # Full detail
 gigstack invoices sat retry <uuid>                      # Retry stuck/errored XML download
 gigstack invoices sat pdf <uuid>                        # Generate and save PDF
 gigstack invoices sat pdf <uuid> --out ./invoices       # Custom output dir
-gigstack invoices sat download <uuid>                   # Convenience: PDF only (XML is web-only)
+gigstack invoices sat download <uuid>                   # Convenience: PDF only; use fetch-xml for XML
 ```
 
-> The XML for SAT-downloaded CFDIs is not exposed via the API; it can only be downloaded from the web UI at `app.gigstack.pro/gastos`. The CLI's `pdf` and `download` commands generate the PDF on demand from the cached XML.
+> The CLI's `pdf` and `download` commands generate the PDF from cached XML. Use `gigstack invoices sat fetch-xml <uuid> --yes --json` for the separate XML download operation, which can charge a download credit.
 
 #### Scheduled downloads
 
@@ -557,7 +557,7 @@ gigstack teams update team_123 --data '{"brand":{"alias":"Mi empresa"}}' --json
 gigstack teams series list team_123 --json
 gigstack teams series create team_123 --data '{"series":"A","live":0,"test":0}' --json
 gigstack teams series update team_123 A --file folios.json --json
-gigstack teams onboarding-url team_123 --json
+gigstack teams onboarding-url team_123 --yes --json
 gigstack teams portal-token team_123 --expires-in 1h --json
 gigstack teams sat-connection team_123 --cert-file csd.cer --key-file csd.key --password-file csd-password.txt --json
 gigstack teams sign-manifest team_123 --file manifest.json --yes --json
@@ -623,10 +623,88 @@ In `--json` mode stdout contains the JSON result; progress and human diagnostics
 use stderr. Errors return `{"error":{"message":"..."}}` and exit nonzero,
 including errors from existing commands. HTTP failures include `status`.
 Interactive prompts never consume piped input: provide all required values;
-destructive account actions and manifest signing require `--yes` in automation.
+destructive account actions, CSD onboarding access renewal and manifest signing require `--yes` in automation.
 The default request timeout is 30 seconds (`GIGSTACK_API_TIMEOUT_MS`, 1–300000).
 A write timeout reports `outcome: "unknown"`; check persisted state before retrying.
 The CLI never automatically retries a mutation.
 
 The offline suite uses a local HTTP fixture and synthetic credentials. It does
 not send invitations, access production, or establish deployment readiness.
+
+### User administration and webhook changes
+
+The existing users API is account administration. It requires admin authority for
+writes; it does not grant every member a self-profile write API. Membership
+changes belong to `teams members`, and invitation emails belong to
+`teams invitations`. Public signup uses a different partner authentication
+contract and is not exposed by these commands.
+
+```bash
+gigstack users list --team team_123 --json
+gigstack users get user_456 --team team_123 --json
+gigstack users create --file managed-user.json --team team_123 --json
+gigstack users update user_456 --data '{"first_name":"Ana","company_role":"Contabilidad"}' --team team_123 --json
+gigstack users reset-password user_456 --team team_123 --json
+gigstack users login-link user_456 --team team_123 --yes --json
+gigstack users delete user_456 --team team_123 --yes --json
+gigstack webhooks get webhook_123 --team team_123 --json
+gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --team team_123 --json
+```
+
+`users create` accepts the v2 user fields: `email`, `first_name`, `last_name`,
+`phone`, `company_role`, `address`, `auto_join` and `role` (`admin`, `editor`,
+`viewer`). `users update` cannot change reserved email or membership fields.
+`reset-password` sends an email. `login-link` creates a credential that signs
+in as the target user and works only for API-created users managed exclusively
+by the caller's billing account, as checked by the server. Treat the returned
+link as a secret. User deletion follows the server's ownership/resource checks.
+
+### SAT credentials, request jobs and XML downloads
+
+CSD invoicing credentials and e.firma credentials for Descarga Masiva are
+separate. Upload e.firma from local files, or connect a locally prepared PFX:
+
+```bash
+gigstack invoices sat credentials fiel --cert-file fiel.cer --key-file fiel.key --password-file fiel-password.txt --phone +520000000000 --team team_123 --json
+gigstack invoices sat credentials pfx --pfx-file fiel.pfx --password-file pfx-password.txt --team team_123 --json
+gigstack invoices sat register --file registration.json --team team_123 --json
+gigstack invoices sat sync debug --team team_123 --json
+gigstack invoices sat sync progress --team team_123 --json
+gigstack invoices sat sync enable --team team_123 --yes --json
+gigstack invoices sat sync extend-to-maximum --team team_123 --yes --json
+```
+
+Registration uses saved e.firma when available. The current request contract
+requires `phone` and `sync_start_date`, with optional `legal_name` and
+`max_monthly_invoices`. The server chooses the maximum history window; the
+sync-period operation always re-registers that maximum (currently 71 months),
+so `extend-to-maximum` does not accept a misleading custom start-date flag.
+
+```bash
+gigstack invoices sat preview --data '{"start_date":"2026-01-01","end_date":"2026-01-31","directions":["received"]}' --team team_123 --json
+gigstack invoices sat jobs list --team team_123 --json
+gigstack invoices sat jobs get job_123 --team team_123 --json
+gigstack invoices sat jobs cancel job_123 --team team_123 --yes --json
+gigstack invoices sat request --file sat-request.json --team team_123 --yes --json
+gigstack invoices sat request-status request_123 --team team_123 --json
+gigstack invoices sat package package_123 --out ./sat-package.zip --team team_123 --json
+gigstack invoices sat fetch-xml CFDI_UUID --team team_123 --yes --json
+gigstack invoices sat import --file xml-import.json --team team_123 --yes --json
+```
+
+`preview` queues metadata discovery; its response is a job acknowledgement,
+not a finished download. Poll `jobs get` for progress. `request` accepts
+`start_date`, `end_date`, `request_type` (`metadata` or `cfdi`), `rfc_type`
+(`issued` or `received`) and optional SAT filters from the API contract.
+`package` returns the JSON/base64 ZIP envelope unless `--out` is given; file
+output creates a private file and refuses to overwrite an existing path.
+
+`fetch-xml` can charge a download credit even though the API method is GET.
+It requires confirmation, and a timeout reports an unknown outcome.
+`import` requires `uuids` (1–500), an explicit numeric `confirm_cost_mxn`, and
+confirmation. The server recalculates cost; a mismatch returns nonzero with
+`error.code: "cost_mismatch"` and the current estimate in `error.details`.
+Review and explicitly confirm the new amount before retrying; the CLI never
+silently accepts a changed cost. Cancelling a job does not undo completed
+work or charges. `teams onboarding-url --yes` likewise acknowledges a
+mutation: generating the link refreshes the CSD portal password/challenge.

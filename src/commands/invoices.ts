@@ -1,3 +1,4 @@
+import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -364,6 +365,7 @@ export function registerInvoiceCommands(program: Command) {
 
   // Descarga Masiva SAT
   const sat = invoices.command("sat").description("Descarga Masiva SAT — facturas recibidas y emitidas");
+  registerSatControlCommands(sat);
 
   withListOpts(sat.command("list").description("Listar facturas descargadas del SAT"))
     .option("--direction <dir>", "Dirección: issued (emitidas) o received (recibidas)")
@@ -475,7 +477,7 @@ export function registerInvoiceCommands(program: Command) {
 
   sat
     .command("download <uuid>")
-    .description("Descargar PDF de una factura del SAT (el XML solo se expone vía web app)")
+    .description("Descargar PDF de una factura del SAT (usa fetch-xml para XML)")
     .option("-o, --out <dir>", "Directorio de salida", ".")
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
@@ -486,9 +488,9 @@ export function registerInvoiceCommands(program: Command) {
         const buf = Buffer.from(pdfBase64, "base64");
         const path = join(opts.out, `${uuid}.pdf`);
         writeFileSync(path, buf);
-        if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_available: false });
+        if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_included: false, xml_command: "gigstack invoices sat fetch-xml <uuid> --yes --json" });
         success(`PDF descargado: ${path}`);
-        console.log(pc.dim("  Nota: el XML del SAT solo está disponible desde app.gigstack.pro/gastos"));
+        console.log(pc.dim("  Para XML: gigstack invoices sat fetch-xml <uuid> --yes --json (puede cobrar un crédito)"));
       } catch (e: any) { error(e); }
     });
 

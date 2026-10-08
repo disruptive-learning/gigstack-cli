@@ -12,7 +12,7 @@ export class ApiError extends Error {
       ? (Array.isArray(details) ? details.join(", ") : String(details))
       : "";
     super(detailStr ? `${msg}: ${detailStr}` : msg);
-    this.code = typeof errObj?.code === "string" ? errObj.code : undefined;
+    this.code = typeof errObj?.code === "string" ? errObj.code : typeof errObj === "string" && /^[a-z][a-z0-9_]+$/.test(errObj) ? errObj : undefined;
   }
 }
 
@@ -28,7 +28,7 @@ export function getApiKey(override?: string): string {
 export async function api(
   method: string,
   path: string,
-  opts?: { body?: any; form?: FormData; query?: Record<string, string>; apiKey?: string; team?: string }
+  opts?: { body?: any; form?: FormData; sideEffect?: boolean; query?: Record<string, string>; apiKey?: string; team?: string }
 ) {
   const apiKey = getApiKey(opts?.apiKey);
 
@@ -60,7 +60,7 @@ export async function api(
     });
   } catch (e: any) {
     if (e.name === "TimeoutError" || e.name === "AbortError") {
-      const write = !["GET", "HEAD"].includes(method.toUpperCase());
+      const write = opts?.sideEffect || !["GET", "HEAD"].includes(method.toUpperCase());
       throw Object.assign(new Error(write
         ? "Tiempo de espera agotado; el resultado de la operación es desconocido. Consulta el estado antes de repetirla."
         : "Tiempo de espera agotado al consultar el API."), { code: "request_timeout", outcome: write ? "unknown" : "not_received" });
@@ -74,13 +74,13 @@ export async function api(
   let text: string;
   try { text = await res.text(); }
   catch {
-    throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: ["GET", "HEAD"].includes(method.toUpperCase()) ? "not_received" : "unknown" });
+    throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: !opts?.sideEffect && ["GET", "HEAD"].includes(method.toUpperCase()) ? "not_received" : "unknown" });
   }
   let data: any;
   try { data = text ? JSON.parse(text) : {}; }
   catch { throw new ApiError(res.status, { error: { code: "invalid_response", message: "El API devolvió una respuesta no JSON" } }); }
 
-  if (!res.ok) {
+  if (!res.ok || data?.success === false) {
     throw new ApiError(res.status, data);
   }
 

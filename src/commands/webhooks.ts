@@ -1,3 +1,4 @@
+import { withJsonInput, readJsonInput, segment } from "../input.js";
 import { Command } from "commander";
 import { api } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, spin } from "../output.js";
@@ -5,6 +6,17 @@ import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.
 
 export function registerWebhookCommands(program: Command) {
   const webhooks = program.command("webhooks").description("Gestionar webhooks");
+
+  webhooks.command("get <id>").description("Consultar URL, eventos y estado del webhook")
+    .action(async id => {
+      const res = await api("GET", `/webhooks/${segment(id)}`);
+      isJsonMode() ? printJson(res) : printKeyValue(res.data ?? res);
+    });
+  withJsonInput(webhooks.command("update <id>").description("Actualizar url/events/description/status del webhook"))
+    .action(async (id, opts) => {
+      const res = await api("PUT", `/webhooks/${segment(id)}`, { body: await readJsonInput(opts) });
+      isJsonMode() ? printJson(res) : printKeyValue(res.data ?? res);
+    });
 
   withListOpts(
     webhooks

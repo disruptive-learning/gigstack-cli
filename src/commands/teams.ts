@@ -48,8 +48,13 @@ export function registerTeamCommands(program: Command) {
     .action(async (id, opts) => call("POST", `${target(id)}/series`, await readJsonInput(opts)));
   withJsonInput(series.command("update <id> <seriesId>").description("Actualizar contadores live/test"))
     .action(async (id, seriesId, opts) => call("PUT", `${target(id)}/series/${segment(seriesId)}`, await readJsonInput(opts)));
-  teams.command("onboarding-url <id>").description("Generar enlace de configuración fiscal")
-    .action(async id => call("GET", `${target(id)}/onboarding-url`));
+  teams.command("onboarding-url <id>").description("Generar enlace fiscal y renovar la contraseña/desafío del portal CSD")
+    .option("-y, --yes", "Confirmar renovación del acceso fiscal")
+    .action(async (id, opts) => {
+      const path = `${target(id)}/onboarding-url`;
+      await requireConfirmation(opts.yes, "¿Generar nuevo acceso fiscal y renovar la contraseña/desafío del portal CSD?");
+      show(await api("GET", path, { sideEffect: true }));
+    });
   teams.command("portal-token <id>").description("Crear token de lectura del portal; trata la respuesta como secreto")
     .option("--expires-in <duration>", "Duración, máximo 24h", "1h")
     .action(async (id, opts) => call("POST", `${target(id)}/portal-access-token`, { expiresIn: opts.expiresIn }));

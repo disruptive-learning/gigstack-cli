@@ -138,7 +138,7 @@ test('team lifecycle, series, onboarding and token commands preserve API methods
     [['teams','series','list','team_b'],'GET','/v2/teams/team_b/series',undefined],
     [['teams','series','create','team_b','--data','{"series":"A","live":0,"test":0}'],'POST','/v2/teams/team_b/series',{series:'A',live:0,test:0}],
     [['teams','series','update','team_b','A','--data','{"live":5}'],'PUT','/v2/teams/team_b/series/A',{live:5}],
-    [['teams','onboarding-url','team_b'],'GET','/v2/teams/team_b/onboarding-url',undefined],
+    [['teams','onboarding-url','team_b','--yes'],'GET','/v2/teams/team_b/onboarding-url',undefined],
     [['teams','portal-token','team_b','--expires-in','30m'],'POST','/v2/teams/team_b/portal-access-token',{expiresIn:'30m'}],
     [['teams','delete','team_b','--yes'],'DELETE','/v2/teams/team_b',undefined],
   ];
@@ -167,4 +167,79 @@ test('login persists staging URL per profile and whoami omits credential materia
   });
   assert.equal(invoke.code,0,invoke.stdout); assert.equal(json(invoke).profile,'staging'); assert.ok(!invoke.stdout.includes('synthetic-test-token'));
   assert.equal(f.requests.length,2);
+});
+
+test('users and webhook administration target documented methods, scoped by global team', async t => {
+  const f = await fixture(t);
+  const cases = [
+    [['users','list'],'GET','/v2/users',undefined],
+    [['users','get','user_a'],'GET','/v2/users/user_a',undefined],
+    [['users','create','--data','{"email":"person@example.invalid","auto_join":false,"role":"viewer"}'],'POST','/v2/users',{email:'person@example.invalid',auto_join:false,role:'viewer'}],
+    [['users','update','user_a','--data','{"first_name":"Fixture"}'],'PUT','/v2/users/user_a',{first_name:'Fixture'}],
+    [['users','reset-password','user_a'],'POST','/v2/users/reset-password/user_a',{}],
+    [['users','login-link','user_a','--yes'],'POST','/v2/users/login-link',{user_id:'user_a'}],
+    [['users','delete','user_a','--yes'],'DELETE','/v2/users/user_a',undefined],
+    [['webhooks','get','webhook_a'],'GET','/v2/webhooks/webhook_a',undefined],
+    [['webhooks','update','webhook_a','--data','{"status":"inactive","description":null}'],'PUT','/v2/webhooks/webhook_a',{status:'inactive',description:null}],
+  ];
+  for (const [args,method,path,body] of cases) {
+    const r=await f.run(['--team','team_b',...args,'--json']);assert.equal(r.code,0,r.stdout);json(r);
+    const req=f.requests.at(-1);const url=new URL(req.url,f.base);assert.equal(req.method,method);assert.equal(url.pathname,path);assert.equal(url.searchParams.get('team'),'team_b');assert.deepEqual(req.body?JSON.parse(req.body):undefined,body);
+  }
+});
+
+test('SAT register, download requests, sync, previews and jobs preserve distinct contracts', async t => {
+  const f=await fixture(t);
+  const cases=[
+    [['register','--data','{"phone":"+520000000000","sync_start_date":"2026-01-01"}'],'POST','/register',{phone:'+520000000000',sync_start_date:'2026-01-01'}],
+    [['request','--data','{"start_date":"2026-01-01","end_date":"2026-01-31","request_type":"metadata","rfc_type":"received"}','--yes'],'POST','/request',{start_date:'2026-01-01',end_date:'2026-01-31',request_type:'metadata',rfc_type:'received'}],
+    [['request-status','req_a'],'GET','/status/req_a',undefined],
+    [['package','pack_a'],'GET','/package/pack_a',undefined],
+    [['fetch-xml','uuid_a','--yes'],'GET','/invoice/uuid_a',undefined],
+    [['sync','debug'],'GET','/debug',undefined],
+    [['sync','progress'],'GET','/progress',undefined],
+    [['sync','enable','--yes'],'POST','/enable-sync',{}],
+    [['sync','extend-to-maximum','--yes'],'PUT','/sync-period',{}],
+    [['preview','--data','{"start_date":"2026-01-01","end_date":"2026-01-31","directions":["received"]}'],'POST','/preview',{start_date:'2026-01-01',end_date:'2026-01-31',directions:['received']}],
+    [['import','--data','{"uuids":["uuid_a"],"confirm_cost_mxn":0.2}','--yes'],'POST','/import',{uuids:['uuid_a'],confirm_cost_mxn:0.2}],
+    [['jobs','list'],'GET','/jobs',undefined],
+    [['jobs','get','job_a'],'GET','/jobs/job_a',undefined],
+    [['jobs','cancel','job_a','--yes'],'POST','/jobs/job_a/cancel',{}],
+  ];
+  for(const [args,method,path,body] of cases){
+    const r=await f.run(['invoices','sat',...args,'--team','team_b','--json']);assert.equal(r.code,0,r.stdout);json(r);
+    const req=f.requests.at(-1);const url=new URL(req.url,f.base);assert.equal(req.method,method);assert.equal(url.pathname,'/v2/invoices/download'+path);assert.equal(url.searchParams.get('team'),'team_b');assert.deepEqual(req.body?JSON.parse(req.body):undefined,body);
+  }
+});
+
+test('sensitive account/fiscal operations require explicit confirmation and import cost',async t=>{
+  const f=await fixture(t);
+  for(const args of [
+    ['users','login-link','user_a'],['users','delete','user_a'],['teams','onboarding-url','team_b'],
+    ['invoices','sat','fetch-xml','uuid_a'],['invoices','sat','sync','enable'],['invoices','sat','jobs','cancel','job_a'],
+    ['invoices','sat','import','--data','{"uuids":["uuid_a"]}','--yes'],
+    ['invoices','sat','import','--data','{"uuids":["uuid_a"],"confirm_cost_mxn":0.2}'],
+    ['users','create','--data','{"email":"person@example.invalid","role":"owner"}'],
+  ]){const r=await f.run([...args,'--json']);assert.equal(r.code,1,r.stdout);assert.ok(json(r).error);}
+  assert.equal(f.requests.length,0);
+});
+
+test('FIEL and PFX use secure file inputs and correct password field names',async t=>{
+  const f=await fixture(t);const dir=await mkdtemp(join(tmpdir(),'gigstack-cli-fiel-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  await Promise.all([writeFile(join(dir,'cert'),'fake-certificate'),writeFile(join(dir,'key'),'fake-private-key'),writeFile(join(dir,'password'),' secret with spaces \n'),writeFile(join(dir,'pfx'),'fake-pfx')]);
+  let r=await f.run(['invoices','sat','credentials','fiel','--cert-file',join(dir,'cert'),'--key-file',join(dir,'key'),'--password-file',join(dir,'password'),'--phone','+520000000000','--json']);assert.equal(r.code,0,r.stdout);json(r);
+  let req=f.requests.at(-1);assert.equal(req.url,'/v2/invoices/download/fiel');assert.match(req.body,/name="password"/);assert.ok(!req.body.includes('name="keyPass"'));assert.match(req.body,/ secret with spaces /);assert.ok(!r.stdout.includes('fake-private-key'));
+  r=await f.run(['invoices','sat','credentials','pfx','--pfx-file',join(dir,'pfx'),'--password-file',join(dir,'password'),'--json']);assert.equal(r.code,0,r.stdout);json(r);
+  req=f.requests.at(-1);assert.equal(req.url,'/v2/invoices/download/pfx');assert.deepEqual(JSON.parse(req.body),{pfx:Buffer.from('fake-pfx').toString('base64'),pfx_password:' secret with spaces '});assert.ok(!r.stdout.includes('secret with spaces'));
+});
+
+test('cost mismatch exposes a bounded estimate for reconfirmation without retry',async t=>{
+  const f=await fixture(t,()=>({status:409,success:false,error:'cost_mismatch',message:'Costo cambió',data:{estimated_cost_mxn:0.4,importable:2,private_debug:'never expose this'}}));
+  const r=await f.run(['invoices','sat','import','--data','{"uuids":["a","b"],"confirm_cost_mxn":0.2}','--yes','--json']);assert.equal(r.code,1);const out=json(r);assert.equal(out.error.code,'cost_mismatch');assert.deepEqual(out.error.details,{estimated_cost_mxn:0.4,importable:2});assert.ok(!r.stdout.includes('private_debug'));assert.equal(f.requests.length,1);
+});
+
+test('billed GET timeout has unknown outcome and semantic failures return nonzero',async t=>{
+  const f=await fixture(t,req=>req.url.includes('/invoice/')?{delay:150,data:{}}:{success:false,error:'operation_failed',message:'Failed'});
+  let r=await f.run(['invoices','sat','fetch-xml','uuid_a','--yes','--json'],{env:{GIGSTACK_API_TIMEOUT_MS:'70'}});assert.equal(r.code,1);assert.equal(json(r).error.outcome,'unknown');
+  r=await f.run(['users','get','user_a','--json']);assert.equal(r.code,1);assert.equal(json(r).error.code,'operation_failed');
 });

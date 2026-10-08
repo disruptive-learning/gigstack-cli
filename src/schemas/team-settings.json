@@ -1,7 +1,6 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "description": "Update only supplied fields. Null clears a field; null groups reset their documented leaves. Empty objects leave that group unchanged. Arrays replace the selected array.",
   "properties": {
     "avoid_legal_name_replacer": {
       "type": [
@@ -180,7 +179,9 @@
         "null"
       ],
       "items": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
       }
     },
     "taxes_usd": {
@@ -189,7 +190,9 @@
         "null"
       ],
       "items": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
       }
     },
     "withholding_taxes": {
@@ -198,7 +201,9 @@
         "null"
       ],
       "items": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
       }
     },
     "local_taxes": {
@@ -207,7 +212,9 @@
         "null"
       ],
       "items": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
       }
     },
     "complements": {
@@ -217,6 +224,7 @@
       ],
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": [
@@ -236,8 +244,7 @@
               "null"
             ]
           }
-        },
-        "additionalProperties": false
+        }
       }
     },
     "allowed_product_codes": {
@@ -247,6 +254,11 @@
       ],
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "description"
+        ],
         "properties": {
           "key": {
             "type": "string"
@@ -254,12 +266,7 @@
           "description": {
             "type": "string"
           }
-        },
-        "additionalProperties": false,
-        "required": [
-          "key",
-          "description"
-        ]
+        }
       }
     },
     "periodicity": {
@@ -289,7 +296,7 @@
     },
     "global_invoicing_monthly_cuts": {
       "type": [
-        "integer",
+        "number",
         "null"
       ],
       "enum": [
@@ -918,5 +925,6 @@
         }
       }
     }
-  }
+  },
+  "description": "Update only supplied fields. Null clears a field; null groups reset their documented leaves. Empty objects leave that group unchanged. Arrays replace the selected array."
 }
