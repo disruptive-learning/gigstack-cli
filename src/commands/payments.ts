@@ -1,3 +1,5 @@
+import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
+import { requireConfirmation, segment } from "../input.js";
 import { registerSupportDocumentCommands } from "./documents.js";
 import { Command } from "commander";
 import { api } from "../api.js";
@@ -7,6 +9,26 @@ import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.
 export function registerPaymentCommands(program: Command) {
   const payments = program.command("payments").description("Gestionar pagos y cobros");
   registerSupportDocumentCommands(payments, "payments");
+  payments.command("search <query>").description("Search payments; preserve the complete response and pagination")
+    .option("--limit <n>", "Maximum results").option("--page <n>", "Search page").option("--fields <fields>", "Comma-separated search fields")
+    .option("--status <status>", "Payment status").option("--currency <code>", "Currency").option("--client <id>", "Client ID")
+    .action(async (q, opts) => {
+      const query: Record<string,string> = {q};
+      for (const key of ["limit","page","fields","status","currency"]) if(opts[key] !== undefined) query[key]=opts[key];
+      if(opts.client !== undefined) query.client_id=opts.client;
+      printJson(await api("GET", "/payments/search", { query }));
+    });
+  for (const [name, method, suffix] of [["update", "PUT", ""], ["paid", "POST", "/paid"]]) {
+    withCompleteBody(payments.command(`${name} <id>`).description("Apply the endpoint's full JSON body; server validates fields and permissions"))
+      .action(async (id, opts, command) => sendCompleteBody(command, opts, method, `/payments/${segment(id)}${suffix}`));
+  }
+  payments.command("cancel <id>").description("Cancel the payment using its public cancellation rules")
+    .option("-y, --yes", "Confirm cancellation")
+    .action(async (id, opts) => {
+      const path = `/payments/${segment(id)}`;
+      await requireConfirmation(opts.yes, "Cancel this payment in the selected team and mode?");
+      printJson(await api("DELETE", path));
+    });
 
   withListOpts(
     payments
@@ -65,18 +87,21 @@ export function registerPaymentCommands(program: Command) {
       } catch (e: any) { error(e); }
     });
 
-  payments
+  withCompleteBody(payments
     .command("request")
     .description("Solicitar un pago (genera link de cobro)")
-    .requiredOption("--client <id>", "ID del cliente")
-    .requiredOption("--items <json>", 'Items JSON')
+    .option("--client <id>", "ID del cliente")
+    .option("--items <json>", 'Items JSON')
     .option("--currency <code>", "Moneda", "MXN")
     .option("--methods <list>", "Métodos permitidos (card,bank,oxxo,stripe-spei)", "card,bank")
     .option("--automation <type>", "Automatización al pagar: none, pue_invoice, ppd_invoice_and_complement", "none")
     .option("--send-email", "Enviar link por email al cliente")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--idempotency-key <key>", "Stable caller-selected key; keep the same value for the same intended payment")
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", "/payments/request");
+        if (!opts.client || !opts.items) throw new Error("Provide the required client/items/payment fields or a complete JSON body");
         let items;
         try { items = JSON.parse(opts.items); } catch { error("Items JSON inválido"); process.exit(1); }
         const body: any = {
@@ -86,26 +111,31 @@ export function registerPaymentCommands(program: Command) {
           allowed_payment_methods: opts.methods.split(","),
           automation_type: opts.automation || "none",
         };
+        if (opts.idempotencyKey !== undefined) body.idempotency_key = opts.idempotencyKey;
         if (opts.sendEmail) body.send_email = true;
         const res = await spin("Creando solicitud de pago…", () => api("POST", "/payments/request", { body, team: opts.team }));
+        if (isJsonMode()) return printJson(res.data);
         success(`Pago solicitado: ${res.data.id}`);
         if (res.data.short_url) console.log(`  Link: ${res.data.short_url}`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }
     });
 
-  payments
+  withCompleteBody(payments
     .command("register")
     .description("Registrar un pago recibido")
-    .requiredOption("--client <id>", "ID del cliente")
-    .requiredOption("--items <json>", 'Items JSON')
-    .requiredOption("--payment-form <code>", "Forma de pago (03=Transferencia, etc)")
+    .option("--client <id>", "ID del cliente")
+    .option("--items <json>", 'Items JSON')
+    .option("--payment-form <code>", "Forma de pago (03=Transferencia, etc)")
     .option("--currency <code>", "Moneda", "MXN")
     .option("--automation <type>", "Automatización: pue_invoice, ppd_invoice_and_complement, none", "pue_invoice")
     .option("--send-email", "Enviar confirmación por email")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--idempotency-key <key>", "Stable caller-selected key; keep the same value for the same intended payment")
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", "/payments/register");
+        if (!opts.client || !opts.items || !opts.paymentForm) throw new Error("Provide the required client/items/payment fields or a complete JSON body");
         let items;
         try { items = JSON.parse(opts.items); } catch { error("Items JSON inválido"); process.exit(1); }
         const body: any = {
@@ -114,24 +144,26 @@ export function registerPaymentCommands(program: Command) {
           items,
           currency: opts.currency,
           payment_form: opts.paymentForm,
-          idempotency_key: `cli_${Date.now()}`,
+
         };
+        if (opts.idempotencyKey !== undefined) body.idempotency_key = opts.idempotencyKey;
         if (opts.sendEmail) body.send_email = true;
         const res = await spin("Registrando pago…", () => api("POST", "/payments/register", { body, team: opts.team }));
+        if (isJsonMode()) return printJson(res.data);
         success(`Pago registrado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }
     });
 
-  payments
+  withCompleteBody(payments
     .command("refund <id>")
     .description("Reembolsar un pago")
-    .option("--team <id>", "Team ID")
-    .action(async (id, opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (id, opts, command) => {
       try {
-        const res = await spin("Procesando reembolso…", () => api("POST", `/payments/${id}/refund`, { team: opts.team }));
-        success(`Pago ${id} reembolsado`);
-        if (isJsonMode()) printJson(res.data);
+        const path = `/payments/${segment(id)}/refund`;
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", path);
+        throw new Error("Refund requires a JSON body with reason and amount; use --file/--stdin/--data and --yes");
       } catch (e: any) { error(e); }
     });
 }

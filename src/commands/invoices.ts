@@ -1,5 +1,6 @@
+import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
 import { registerSupportDocumentCommands } from "./documents.js";
-import { segment } from "../input.js";
+import { segment, requireConfirmation } from "../input.js";
 import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
@@ -79,7 +80,7 @@ export function registerInvoiceCommands(program: Command) {
       } catch (e: any) { error(e); }
     });
 
-  invoices
+  withCompleteBody(invoices
     .command("create")
     .description("Crear factura de ingreso (CFDI 4.0) — interactivo si no se pasan flags")
     .option("--client <id>", "ID del cliente")
@@ -91,9 +92,10 @@ export function registerInvoiceCommands(program: Command) {
     .option("--series <series>", "Serie")
     .option("--send-email", "Enviar factura por email al cliente")
     .option("--emails <emails>", "Emails adicionales (separados por coma)")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", `/invoices/income`);
         const interactive = !opts.client && !opts.items;
         let clientId = opts.client;
         let items: any[];
@@ -294,6 +296,27 @@ export function registerInvoiceCommands(program: Command) {
 
   // Drafts
   const drafts = invoices.command("drafts").description("Pre-facturas / borradores");
+  drafts.command("get <id>").action(async id => printJson(await api("GET", `/invoices/draft/${segment(id)}`)));
+  withCompleteBody(drafts.command("create").description("Save a draft from its full JSON body"))
+    .action(async (opts, command) => sendCompleteBody(command, opts, "POST", "/invoices/draft"));
+  withCompleteBody(drafts.command("update <id>").description("Update supplied draft fields"))
+    .action(async (id, opts, command) => sendCompleteBody(command, opts, "PUT", `/invoices/draft/${segment(id)}`));
+  for (const [name, method, suffix] of [["delete", "DELETE", ""], ["preview", "POST", "/preview"]]) {
+    drafts.command(`${name} <id>`).option("-y, --yes", "Confirm this draft operation")
+      .action(async (id, opts) => {
+        const path = `/invoices/draft/${segment(id)}${suffix}`;
+        await requireConfirmation(opts.yes, "Apply this draft operation in the selected team and mode?");
+        printJson(await api(method, path));
+      });
+  }
+  for (const [name, route] of [["credit-note-create", "egress"], ["complement-create", "payment"], ["transfer-create", "transfer"]]) {
+    withCompleteBody(invoices.command(name).description("Create the specified fiscal document from its complete JSON body"))
+      .action(async (opts, command) => sendCompleteBody(command, opts, "POST", `/invoices/${route}`));
+  }
+  invoices.command("credit-note-get <id>").action(async id => printJson(await api("GET", `/invoices/egress/${segment(id)}`)));
+  invoices.command("transfer-get <id>").action(async id => printJson(await api("GET", `/invoices/transfer/${segment(id)}`)));
+  withListOpts(invoices.command("transfers").description("List transfer CFDIs and preserve pagination"))
+    .action(async opts => printJson(await api("GET", "/invoices/transfer", { query: buildListQuery(opts), team: opts.team })));
 
   withListOpts(drafts.command("list").description("Listar borradores"))
     .action(async (opts) => {

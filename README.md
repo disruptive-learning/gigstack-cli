@@ -963,3 +963,44 @@ gigstack billing operations reconcile TEAM_ID NEW_UUID_V4 --json
 ```
 
 El diario vincula la cancelación al Checkout original y a la cuenta/ambiente real. Reutilizar el mismo diario consulta primero el nuevo UUID. Un resultado `outcome_unknown` sale con código 1; consulta o concilia ese UUID antes de otra acción. Solo la expiración confirmada cancela el Checkout. Si ya fue completado, la cancelación falla y la suscripción se administra en el portal de facturación.
+
+### Complete request bodies and core resource actions
+
+The commands below accept exactly one of `--file`, `--stdin`, or `--data`, plus `--yes` for a JSON mutation. The CLI checks that the input is a JSON object and sends it unchanged to the named endpoint; the server validates its fields and current permissions. Do not combine JSON input with individual payload flags. Existing flag defaults do not overwrite a JSON body.
+
+```bash
+gigstack clients create --file colombia-client.json --yes --json
+gigstack clients update CLIENT_ID --data '{"phone":null,"metadata":{}}' --yes --json
+gigstack invoices create --file invoice.json --yes --json
+gigstack payments request --file payment-request.json --yes --json
+gigstack payments register --file received-payment.json --yes --json
+gigstack payments update PAYMENT_ID --file payment-changes.json --yes --json
+gigstack payments paid PAYMENT_ID --data '{"payment_form":"03"}' --yes --json
+gigstack payments refund PAYMENT_ID --data '{"reason":"duplicate","amount":10}' --yes --json
+gigstack payments cancel PAYMENT_ID --yes --json
+gigstack payments search 'example' --page 2 --limit 10 --status pending --json
+```
+
+Use the endpoint's exact field names, including country-specific fields, nested invoice settings and explicit delivery/automation choices. For payment request/register, retain a caller-selected `idempotency_key` in the JSON, or use `--idempotency-key` with flag input. The CLI no longer invents a timestamp-based key. It never retries a write automatically; after an uncertain response, read the resource before deciding whether to repeat the request. A refund requires a body with `reason` and `amount`; `external_processor_refund` remains an explicit optional choice.
+
+```bash
+gigstack receipts get RECEIPT_ID --json
+gigstack receipts search 'example' --page 2 --json
+gigstack receipts create --file receipt.json --yes --json
+gigstack receipts reopen RECEIPT_ID --data '{"reason":"Client details corrected"}' --yes --json
+gigstack invoices drafts get DRAFT_ID --json
+gigstack invoices drafts create --file draft.json --yes --json
+gigstack invoices drafts update DRAFT_ID --file draft-changes.json --yes --json
+gigstack invoices drafts preview DRAFT_ID --yes --json
+gigstack invoices drafts delete DRAFT_ID --yes --json
+gigstack invoices credit-note-create --file credit-note.json --yes --json
+gigstack invoices credit-note-get CREDIT_NOTE_ID --json
+gigstack invoices complement-create --file payment-complement.json --yes --json
+gigstack invoices transfer-create --file transfer.json --yes --json
+gigstack invoices transfer-get TRANSFER_ID --json
+gigstack invoices transfers --next CURSOR --json
+gigstack clients upload-csf --file ./csf.pdf --client CLIENT_ID --yes --json
+gigstack clients stamp-pending-receipts CLIENT_ID --yes --json
+```
+
+These new commands preserve the complete API response. Search uses `page`/`per_page`/`found`; list cursors follow the specific endpoint's returned fields. A preview returns its PDF content in the response and does not stamp the draft. CSF upload accepts a local PDF up to 5 MiB, consults SAT fiscal details and creates a client when `--client` is omitted. Pending-receipt stamping processes at most 100 receipts per call: inspect `remaining`, and treat `failed > 0` as a partial result (exit code 1). No command claims that all receipts completed merely because HTTP returned 200.

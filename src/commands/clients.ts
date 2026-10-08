@@ -1,3 +1,7 @@
+import { readFile, stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
+import { segment, requireConfirmation } from "../input.js";
+import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
 import { registerSupportDocumentCommands } from "./documents.js";
 import { Command } from "commander";
 import pc from "picocolors";
@@ -18,6 +22,30 @@ const TAX_SYSTEMS = [
 export function registerClientCommands(program: Command) {
   const clients = program.command("clients").description("Gestionar clientes");
   registerSupportDocumentCommands(clients, "clients");
+  clients.command("upload-csf").description("Create/update a client from a local CSF PDF; consults SAT fiscal details")
+    .requiredOption("--file <path>", "Local CSF PDF, at most 5 MiB")
+    .option("--client <id>", "Existing client to update; omitted creates a client")
+    .option("-y, --yes", "Confirm fiscal-data lookup and client save")
+    .action(async opts => {
+      if (opts.client !== undefined) segment(opts.client);
+      const info = await stat(opts.file);
+      if (extname(opts.file).toLowerCase() !== ".pdf" || !info.isFile() || info.size < 5 || info.size > 5 * 1024 * 1024) throw new Error("CSF must be a local PDF up to 5 MiB");
+      const bytes = await readFile(opts.file);
+      if (bytes.length > 5 * 1024 * 1024 || bytes.subarray(0,5).toString() !== "%PDF-") throw new Error("Invalid or oversized CSF PDF");
+      await requireConfirmation(opts.yes, "Read SAT fiscal details and create/update this client in the selected team?");
+      const form = new FormData();
+      form.append("file", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), basename(opts.file));
+      printJson(await api("POST", "/clients/csf", { form, query: opts.client ? { client_id: opts.client } : {} }));
+    });
+  clients.command("stamp-pending-receipts <id>").description("Stamp up to 100 pending client receipts; inspect failed and remaining")
+    .option("-y, --yes", "Confirm fiscal stamping")
+    .action(async (id, opts) => {
+      const path = `/clients/${segment(id)}/stamp-pending-receipts`;
+      await requireConfirmation(opts.yes, "Stamp the client's pending receipts in the selected team and mode?");
+      const response = await api("POST", path);
+      printJson(response);
+      if (Number(response.data?.failed) > 0) process.exitCode = 1;
+    });
 
   withListOpts(
     clients
@@ -65,7 +93,7 @@ export function registerClientCommands(program: Command) {
       } catch (e: any) { error(e); }
     });
 
-  clients
+  withCompleteBody(clients
     .command("create")
     .description("Crear un cliente (interactivo si no se pasan flags)")
     .option("--name <name>", "Nombre o razón social")
@@ -74,9 +102,10 @@ export function registerClientCommands(program: Command) {
     .option("--tax-system <code>", "Régimen fiscal (ej: 601, 612, 626)")
     .option("--zip <zip>", "Código postal")
     .option("--use <use>", "Uso CFDI", "G03")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", `/clients`);
         const interactive = !opts.name && !opts.rfc;
         const name = opts.name || (interactive ? await askRequired("Nombre / razón social") : "");
         const email = opts.email || (interactive ? await ask("Email") : "");
@@ -103,7 +132,7 @@ export function registerClientCommands(program: Command) {
       } catch (e: any) { error(e); }
     });
 
-  clients
+  withCompleteBody(clients
     .command("update <id>")
     .description("Actualizar un cliente")
     .option("--name <name>", "Nombre o razón social")
@@ -112,9 +141,10 @@ export function registerClientCommands(program: Command) {
     .option("--tax-system <code>", "Régimen fiscal")
     .option("--zip <zip>", "Código postal")
     .option("--use <use>", "Uso CFDI")
-    .option("--team <id>", "Team ID")
-    .action(async (id, opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (id, opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "PUT", `/clients/${segment(id)}`);
         const hasFlags = opts.name || opts.email || opts.rfc || opts.taxSystem || opts.zip || opts.use;
         let body: any = {};
 
