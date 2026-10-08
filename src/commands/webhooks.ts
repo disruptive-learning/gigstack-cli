@@ -1,8 +1,8 @@
 import { withJsonInput, readJsonInput, segment } from "../input.js";
 import { Command } from "commander";
 import { api } from "../api.js";
-import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, spin } from "../output.js";
-import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
+import { printTable, printJson, printKeyValue, success, error, isJsonMode, spin } from "../output.js";
+
 
 export function registerWebhookCommands(program: Command) {
   const webhooks = program.command("webhooks").description("Gestionar webhooks");
@@ -18,17 +18,16 @@ export function registerWebhookCommands(program: Command) {
       isJsonMode() ? printJson(res) : printKeyValue(res.data ?? res);
     });
 
-  withListOpts(
-    webhooks
-      .command("list")
-      .description("Listar webhooks configurados")
-  )
+  webhooks.command("list").description("Listar webhooks configurados")
+    .option("--limit <n>", "Límite (1-100)", "20")
+    .option("--cursor <cursor>", "next_cursor anterior")
+    .option("--status <status>", "active o inactive")
     .action(async (opts) => {
       try {
-        const query = buildListQuery(opts);
+        const query = { limit: opts.limit, ...(opts.cursor ? { cursor: opts.cursor } : {}), ...(opts.status ? { status: opts.status } : {}) };
         const res = await spin("Cargando webhooks…", () => api("GET", "/webhooks", { query, team: opts.team }));
         const items = res.data || [];
-        if (isJsonMode()) return printListJson(res, items);
+        if (isJsonMode()) return printJson(res);
         printTable(
           items.map((w: any) => ({
             id: w.id ? w.id.slice(0, 12) + "…" : "—",
@@ -36,7 +35,7 @@ export function registerWebhookCommands(program: Command) {
             events: (w.events || []).join(", ").slice(0, 30) || "all",
           })),
         );
-        printPaginationHint(res);
+        if (res.has_more) console.log(`Siguiente página: --cursor ${res.next_cursor}`);
       } catch (e: any) { error(e); }
     });
 

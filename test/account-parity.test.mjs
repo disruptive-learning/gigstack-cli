@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, stat, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -309,4 +309,65 @@ test('partial group failures exit nonzero with every per-flow result; stale revi
   assert.equal(partial.code,1); assert.equal(json(partial).error.code,'partial_failure'); assert.deepEqual(json(partial).data.results,results);
   const stale = await f.run(['journey-groups','revert','g1','--data','{"expectedLastUpdated":1}','--yes','--json']);
   assert.equal(stale.code,1); assert.equal(json(stale).error.code,'group_changed'); assert.equal(f.requests.length,2);
+});
+
+test('self commands preserve profile nulls, recipient IDs, preferences and cursor envelopes', async t => {
+  const f = await fixture(t, () => ({ success: true, data: [], has_more: true, next_cursor: 'next_fixture' }));
+  const cases = [
+    [['me','get'],'GET','/v2/users/me',undefined],
+    [['me','update','--stdin'],'PATCH','/v2/users/me',{ first_name: null, company_role: 'Owner' }],
+    [['me','preferences','get','team_b'],'GET','/v2/users/me/preferences/team_b',undefined],
+    [['me','preferences','update','team_b','--stdin'],'PATCH','/v2/users/me/preferences/team_b',{ testmode: false, search_collection: null }],
+    [['me','active-context','--stdin'],'POST','/v2/users/me/active-context',{ team_id: 'team_b' }],
+    [['me','notifications','list','--cursor','old_cursor'],'GET','/v2/users/me/notifications',undefined],
+    [['me','notifications','unread-count'],'GET','/v2/users/me/notifications/unread-count',undefined],
+    [['me','notifications','read','recipient_1'],'POST','/v2/users/me/notifications/recipient_1/read',{}],
+    [['me','notifications','dismiss','recipient_1'],'DELETE','/v2/users/me/notifications/recipient_1',undefined],
+    [['me','notifications','read-all','--yes'],'POST','/v2/users/me/notifications/read-all',{}],
+    [['me','mcp-tokens','list'],'GET','/v2/users/me/mcp-tokens',undefined],
+    [['me','mcp-tokens','revoke','mcp_1','--yes'],'DELETE','/v2/users/me/mcp-tokens/mcp_1',undefined],
+  ];
+  for (const [args,method,path,body] of cases) {
+    const r = await f.run([...args,'--json'], { input: body ? JSON.stringify(body) : '' });
+    assert.equal(r.code,0,r.stderr); assert.equal(json(r).next_cursor,'next_fixture');
+    assert.equal(f.requests.at(-1).method,method); assert.equal(new URL(f.requests.at(-1).url,f.base).pathname,path);
+    if (body) assert.deepEqual(JSON.parse(f.requests.at(-1).body),body);
+  }
+});
+
+test('API and MCP credential issuance saves secrets once to new private files without stdout disclosure', async t => {
+  const f = await fixture(t, req => req.url.includes('/users/me/mcp-tokens') ? { success:true, data: { token: { keyid:'mcp_fixture' }, apikey:'synthetic-mcp-secret', mcp_url:'https://fixture.test/mcp?token=synthetic-mcp-secret' } } : { success:true, data: { live:{ key:{keyid:'live_fixture'},apikey:'synthetic-live-secret' },test:{key:{keyid:'test_fixture'},apikey:'synthetic-test-secret'},revoked_count:2 } });
+  const dir = await mkdtemp(join(tmpdir(),'gigstack-secrets-')); t.after(() => rm(dir,{recursive:true,force:true}));
+  for (const action of ['create','rotate']) {
+    const target = join(dir,`${action}.json`);
+    const r = await f.run(['api-keys',action,'--out',target,'--yes','--json']);
+    assert.equal(r.code,0,r.stderr); assert.equal(json(r).data.credentials_file,target);
+    assert.doesNotMatch(r.stdout + r.stderr,/synthetic-(live|test)-secret/);
+    assert.equal((await stat(target)).mode & 0o777,0o600);
+    assert.equal(JSON.parse(await readFile(target,'utf8')).data.live.apikey,'synthetic-live-secret');
+    const count = f.requests.length;
+    const duplicate = await f.run(['api-keys',action,'--out',target,'--yes','--json']);
+    assert.equal(duplicate.code,1); assert.equal(f.requests.length,count);
+  }
+  const path = join(dir,'mcp.json');
+  const args = ['me','mcp-tokens','create','--data','{"name":"Fixture","team_id":"team_b","livemode":false}','--out',path,'--yes','--json'];
+  const before = f.requests.length;
+  const missingConsent = await f.run(args); assert.equal(missingConsent.code,1); assert.equal(f.requests.length,before);
+  const accepted = await f.run([...args,'--accept-terms']); assert.equal(accepted.code,0,accepted.stderr);
+  assert.equal(JSON.parse(f.requests.at(-1).body).terms_accepted,true);
+  assert.doesNotMatch(accepted.stdout + accepted.stderr,/synthetic-mcp-secret|mcp_url/);
+  assert.equal(JSON.parse(await readFile(path,'utf8')).data.apikey,'synthetic-mcp-secret');
+});
+
+test('credential revocation is explicit and webhook cursors are not lost', async t => {
+  const f = await fixture(t, () => ({ success:true,data:[],has_more:true,next_cursor:'webhook_next' }));
+  for (const args of [['api-keys','revoke','sk_test_fixture'],['api-keys','emergency-revoke'],['me','mcp-tokens','revoke','mcp_fixture']]) {
+    const refused = await f.run([...args,'--json']); assert.equal(refused.code,1);
+  }
+  assert.equal(f.requests.length,0);
+  for (const [args,path,method] of [ [['api-keys','list','--cursor','opaque','--include-revoked'],'/v2/api-keys','GET'],[['api-keys','revoke','sk_test_fixture','--yes'],'/v2/api-keys/sk_test_fixture','DELETE'],[['api-keys','emergency-revoke','--yes'],'/v2/api-keys/emergency-revoke','POST'],[['webhooks','list','--cursor','opaque','--status','active'],'/v2/webhooks','GET'] ]) {
+    const r=await f.run([...args,'--team','team_b','--json']); assert.equal(r.code,0,r.stderr); assert.equal(json(r).next_cursor,'webhook_next');
+    const req=f.requests.at(-1),url=new URL(req.url,f.base); assert.equal(url.pathname,path);assert.equal(req.method,method);assert.equal(url.searchParams.get('team'),'team_b');
+    if(method==='GET') assert.equal(url.searchParams.get('cursor'),'opaque');
+  }
 });
