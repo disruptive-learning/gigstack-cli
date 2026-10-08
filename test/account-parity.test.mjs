@@ -581,3 +581,44 @@ test('billing retry only resends original UUID/body after a verified 404 readbac
   assert.deepEqual(f.requests.map(r=>r.method),['GET','POST','GET','GET','POST']);assert.equal(f.requests[1].body,f.requests[4].body);
   await chmod(journal,0o644);assert.equal((await f.run(args)).code,1);assert.equal(f.requests.filter(r=>r.method==='POST').length,2);
 });
+
+test('document CRUD/link/analyze preserve exact camelCase bodies and empty-page cursors',async t=>{
+  const response={data:{data:[],has_more:true,next_cursor:'opaque_page'}};const f=await fixture(t,()=>response);
+  const create={documentType:'contract',name:'Fixture',fileUrl:'https://storage.googleapis.com/fixture/teams/team_b/test/support-documents/file.pdf',storagePath:'teams/team_b/test/support-documents/file.pdf',fileName:'file.pdf',tags:[],metadata:{source:'fixture'}};
+  const cases=[
+    [['documents','list','--limit','5','--cursor','opaque_page','--document-type','contract','--entity-type','client','--entity-id','client_1'],'GET','/v2/documents?limit=5&cursor=opaque_page&document_type=contract&entity_type=client&entity_id=client_1'],
+    [['documents','get','doc_1'],'GET','/v2/documents/doc_1'],
+    [['documents','create','--data',JSON.stringify(create),'--yes'],'POST','/v2/documents'],
+    [['documents','update','doc_1','--data','{"description":null,"validFrom":0,"tags":[]}','--yes'],'PATCH','/v2/documents/doc_1'],
+    [['documents','link','doc_1','--entity-type','client','--entity-id','client_1','--yes'],'POST','/v2/documents/doc_1/link'],
+    [['documents','unlink','doc_1','--entity-type','payment','--entity-id','payment_1','--yes'],'DELETE','/v2/documents/doc_1/link'],
+    [['documents','analyze','doc_1','--yes'],'POST','/v2/documents/doc_1/analyze'],
+    [['documents','delete','doc_1','--yes'],'DELETE','/v2/documents/doc_1'],
+    [['invoices','payment-get','complement_1'],'GET','/v2/invoices/payment/complement_1'],
+  ];
+  for(const[args,method,path]of cases){const r=await f.run([...args,'--json']);assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r),response);assert.equal(f.requests.at(-1).method,method);assert.equal(f.requests.at(-1).url,path);}
+  assert.deepEqual(JSON.parse(f.requests[2].body),create);assert.deepEqual(JSON.parse(f.requests[3].body),{description:null,validFrom:0,tags:[]});
+  assert.deepEqual(JSON.parse(f.requests[5].body),{entityType:'payment',entityId:'payment_1'});
+});
+
+test('standalone and three resource uploads send local multipart files with correct MIME, fields and selected team',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-documents-'));t.after(()=>rm(dir,{recursive:true,force:true}));const file=join(dir,'fixture.pdf');await writeFile(file,'%PDF-synthetic-fixture');const f=await fixture(t);
+  const cases=[['documents','upload'],...['clients','payments','invoices'].map(resource=>[resource,'support-documents','upload','resource_1'])];
+  for(const args of cases){const r=await f.run([...args,'--file',file,'--document-type','contract','--name','Contrato revisado','--description','Fixture','--team','team_b','--yes','--json']);assert.equal(r.code,0,r.stderr);json(r);const req=f.requests.at(-1);assert.equal(req.method,'POST');assert.match(req.headers['content-type'],/^multipart\/form-data; boundary=/);assert.match(req.body,/name="file"; filename="fixture.pdf"/);assert.match(req.body,/Content-Type: application\/pdf/);assert.match(req.body,/name="documentType"\r\n\r\ncontract/);assert.match(req.body,/name="name"\r\n\r\nContrato revisado/);assert.ok(!req.body.includes('analyzeWithAI'));assert.equal(new URL(req.url,f.base).searchParams.get('team'),'team_b');}
+  for(const resource of ['clients','payments','invoices']){const r=await f.run([resource,'support-documents','list','resource_1','--json']);assert.equal(r.code,0);assert.equal(f.requests.at(-1).url,`/v2/${resource}/resource_1/support-documents`);}
+  assert.equal(f.requests.length,7);
+});
+
+test('document unsafe identifiers, inert AI flags, unconfirmed uploads and oversized files are rejected locally',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'gigstack-documents-invalid-'));t.after(()=>rm(dir,{recursive:true,force:true}));const file=join(dir,'fixture.pdf');await writeFile(file,'%PDF-fixture');const large=join(dir,'large.pdf');await writeFile(large,Buffer.alloc(10*1024*1024+1));const f=await fixture(t);
+  const cases=[
+    ['documents','get','../other'],['documents','list','--limit','101'],['documents','list','--entity-type','users'],
+    ['documents','upload','--file',file,'--document-type','contract'],
+    ['documents','upload','--file',large,'--document-type','contract','--yes'],
+    ['documents','upload','--file',file,'--document-type','subscription_info','--yes'],
+    ['documents','create','--data','{"analyzeWithAI":true}','--yes'],
+    ['documents','update','doc_1','--data','{"livemode":true}','--yes'],
+    ['documents','analyze','doc_1'],['payments','support-documents','upload','../other','--file',file,'--document-type','contract','--yes'],
+  ];
+  for(const args of cases){const r=await f.run([...args,'--json']);assert.equal(r.code,1);assert.ok(json(r).error);}assert.equal(f.requests.length,0);
+});

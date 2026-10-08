@@ -1,3 +1,4 @@
+import { registerSupportDocumentCommands } from "./documents.js";
 import { Command } from "commander";
 import { api } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
@@ -5,6 +6,7 @@ import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.
 
 export function registerPaymentCommands(program: Command) {
   const payments = program.command("payments").description("Gestionar pagos y cobros");
+  registerSupportDocumentCommands(payments, "payments");
 
   withListOpts(
     payments

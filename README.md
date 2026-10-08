@@ -919,3 +919,36 @@ gigstack billing operations reconcile TEAM_ID OPERATION_UUID --json
 ```
 
 `processing` y `handoff_ready` describen estados pendientes, no finalización. `failed` y `outcome_unknown` salen con código 1 y conservan el resultado/error de la operación. `reconcile` consulta evidencia sin repetir cargos ni escrituras del proveedor. `stripe_synced:false` conserva un guardado fiscal parcial. La liberación de un resultado incierto requiere inicio de sesión Firebase y reconocimiento humano explícito; no hay comando de agente `resolve`.
+
+### Documentos, archivos de respaldo y complementos de pago
+
+```bash
+gigstack documents list --team TEAM_ID --limit 50 --document-type contract --json
+gigstack documents list --team TEAM_ID --limit 50 --document-type contract --cursor NEXT_CURSOR --json
+gigstack documents get DOCUMENT_ID --team TEAM_ID --json
+gigstack documents upload --team TEAM_ID --file ./contract.pdf --document-type contract --name Contrato --yes --json
+gigstack documents create --team TEAM_ID --file stored-document.json --yes --json
+gigstack documents update DOCUMENT_ID --team TEAM_ID --data '{"description":null,"tags":[]}' --yes --json
+gigstack documents link DOCUMENT_ID --team TEAM_ID --entity-type client --entity-id CLIENT_ID --yes --json
+gigstack documents unlink DOCUMENT_ID --team TEAM_ID --entity-type client --entity-id CLIENT_ID --yes --json
+gigstack documents analyze DOCUMENT_ID --team TEAM_ID --yes --json
+gigstack documents delete DOCUMENT_ID --team TEAM_ID --yes --json
+```
+
+La lista conserva `data.data`, `data.has_more` y `data.next_cursor`. Una página vacía con `has_more:true` requiere seguir iterando; el cursor está ligado al equipo, modo y filtros. Hay filtros `--document-type`, `--compliance-status`, `--entity-type` y `--entity-id`. Las lecturas y enlaces respetan el modo de la credencial; no se cambia mediante el cuerpo.
+
+`upload` acepta archivos locales PDF/PNG/JPG/JPEG/WEBP hasta 10 MiB; no descarga una URL remota. El tipo independiente admite `contract`, `delivery_proof`, `payment_proof` o `communication`. `create` registra un archivo ya guardado: requiere `documentType`, `name`, `fileUrl`, `storagePath`, `fileName` en camelCase; permite `description`, `fileSize`, `mimeType`, `linkedEntities`, `validFrom`, `validUntil`, `tags`, `metadata`. El servidor exige una ruta `teams/TEAM_ID/live|test/support-documents/...` y URL correspondiente a su bucket. El namespace compartido antiguo `sat_documents` queda reservado al navegador Firebase. Se recomienda `upload` cuando el archivo todavía está en tu equipo.
+
+Los campos de `update` son `name`, `description`, `complianceStatus`, `complianceNotes`, `validFrom`, `validUntil`, `tags`, `metadata`; se preservan nulos y colecciones vacías. `delete` es eliminación lógica y no afirma borrar el objeto de Storage. El análisis IA se pide por separado con `analyze`; subir/registrar no lo inicia y el CLI rechaza el antiguo flag inoperante `analyzeWithAI`. Trata los enlaces privados devueltos como datos de acceso al documento.
+
+```bash
+gigstack clients support-documents list CLIENT_ID --team TEAM_ID --json
+gigstack clients support-documents upload CLIENT_ID --team TEAM_ID --file ./proof.pdf --document-type contract --yes --json
+gigstack payments support-documents list PAYMENT_ID --team TEAM_ID --json
+gigstack payments support-documents upload PAYMENT_ID --team TEAM_ID --file ./proof.pdf --document-type payment_confirmation --yes --json
+gigstack invoices support-documents list INVOICE_ID --team TEAM_ID --json
+gigstack invoices support-documents upload INVOICE_ID --team TEAM_ID --file ./proof.pdf --document-type delivery_proof --yes --json
+gigstack invoices payment-get PAYMENT_COMPLEMENT_ID --team TEAM_ID --json
+```
+
+Los respaldos vinculados admiten además `payment_confirmation` y `subscription_info`, con `--name`/`--description` opcionales. Sus listas conservan la respuesta completa y no ofrecen cursor. `invoices payment-get` lee un CFDI tipo P (complemento de pago), no una factura de ingreso ni una lista de cobros relacionados.

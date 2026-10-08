@@ -1,3 +1,5 @@
+import { registerSupportDocumentCommands } from "./documents.js";
+import { segment } from "../input.js";
 import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
@@ -14,6 +16,9 @@ function uid(item: any): string {
 
 export function registerInvoiceCommands(program: Command) {
   const invoices = program.command("invoices").description("Gestionar facturas CFDI");
+  registerSupportDocumentCommands(invoices, "invoices");
+  invoices.command("payment-get <id>").description("Leer CFDI de complemento de pago (tipo P); conserva respuesta completa")
+    .action(async id => printJson(await api("GET", `/invoices/payment/${segment(id)}`)));
 
   withListOpts(
     invoices

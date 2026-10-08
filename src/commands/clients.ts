@@ -1,3 +1,4 @@
+import { registerSupportDocumentCommands } from "./documents.js";
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
@@ -16,6 +17,7 @@ const TAX_SYSTEMS = [
 
 export function registerClientCommands(program: Command) {
   const clients = program.command("clients").description("Gestionar clientes");
+  registerSupportDocumentCommands(clients, "clients");
 
   withListOpts(
     clients
