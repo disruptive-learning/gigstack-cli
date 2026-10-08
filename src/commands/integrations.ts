@@ -1,3 +1,4 @@
+import { registerProviderOperations } from "./provider-operations.js";
 import { Command } from "commander";
 import { api } from "../api.js";
 import { readJsonInput, requireConfirmation, teamTarget, withJsonInput } from "../input.js";
@@ -21,6 +22,7 @@ function validateSettings(body: Record<string, unknown>, schema: Schema) {
 }
 export function registerIntegrationCommands(program: Command) {
   const integrations = program.command("integrations").description("Catálogo y ajustes no secretos; estado almacenado no implica conexión remota confirmada");
+  registerProviderOperations(integrations);
   integrations.command("catalog <teamId>").description("Proveedores, disponibilidad, alcance y acciones respaldadas por el API")
     .action(async id => printJson(await api("GET", `${teamTarget(id)}/integrations/catalog`)));
   integrations.command("get <teamId> <provider>").description("Leer proyección segura del proveedor y ajustes persistidos")

@@ -852,3 +852,33 @@ gigstack integrations bank settings TEAM_ID --file bank-settings.json --yes --js
 Hay comandos `schema` y `settings` para `stripe`, `adyen`, `paypal`, `conekta`, `openpay`, `clip`, `clockpms`, `pagoralia`, `dlocal`, `woocommerce`, `mercadopago`, `shopify` y `bank`. El esquema local limita los campos admitidos y conserva `false`, cadenas vacías y `null` donde el API lo permite. Se requiere `--yes` para ajustes compartidos. El servidor sigue validando rol, cuenta y disponibilidad regional.
 
 El catálogo incluye 25 proveedores y distingue su disponibilidad y alcance. Leer estado almacenado no confirma conectividad remota. Estos ajustes no guardan API keys/contraseñas, no completan conexiones y no aceptan `completed:true`. Las operaciones particulares de proveedores y sus requisitos de identidad se documentan por separado.
+
+### NetSuite y PayPal POS (Zettle)
+
+Estas operaciones requieren identidad de usuario Firebase o MCP personal; una API key de equipo/OAuth no representa a su creador. El servidor conserva los permisos de integración/factura y comprueba equipo y modo.
+
+```bash
+gigstack integrations zettle status TEAM_ID --json
+gigstack integrations zettle settings TEAM_ID --data '{"automaticInvoicing":false,"cardPaymentForm":"28"}' --yes --json
+gigstack integrations zettle sync TEAM_ID --yes --json
+gigstack integrations zettle disconnect TEAM_ID --yes --json
+gigstack integrations netsuite status TEAM_ID --json
+gigstack integrations netsuite ping TEAM_ID --yes --json
+gigstack integrations netsuite invoices status TEAM_ID INVOICE_ID --json
+gigstack integrations netsuite invoices sync TEAM_ID INVOICE_ID --yes --json
+gigstack integrations netsuite invoices resync TEAM_ID INVOICE_ID --yes --json
+gigstack integrations netsuite syncs TEAM_ID --before 123_SYNC_ID --json
+gigstack integrations netsuite disconnect TEAM_ID --yes --json
+```
+
+`queued`/`enqueued` confirma encolado, no finalización. Un timeout puede haber cambiado pasos locales: consulta el estado antes de repetir. Reencolar con `resync` una factura pagada elimina y recrea su pago aplicado en NetSuite por el total actual. POS en modo prueba consulta compras reales del comercio. Sus revisiones y el resumen NetSuite muestran solo las primeras 20 filas. El historial NetSuite entrega páginas de 50 y conserva `nextBefore`/`truncated` de la consulta acotada; no afirma ser historia completa.
+
+POS desconectado puede devolver `partial_cleanup:true` y `remote_removed:false`: el CLI conserva ese resultado y sale con código 1. NetSuite desconectado devuelve `credentials_retained:true`; desactivar una conexión no borra sus credenciales cifradas.
+
+```bash
+gigstack integrations netsuite items get TEAM_ID --json
+gigstack integrations netsuite items preview TEAM_ID --file rule-preview.json --yes --json
+gigstack integrations netsuite items save-rule TEAM_ID --file reviewed-rule.json --yes --json
+```
+
+El mapeo de artículos es compartido. `items get` lee la configuración sin consultar al proveedor; preview y guardado consultan el catálogo **live**, incluso con una credencial de prueba. Preview acepta `{rule,days?}`; `rule` contiene `match`, `matchType` (`exact`/`contains`), `itemId` como cadena numérica y opcionalmente `refundItemId`/`scope` (`domestic`/`foreign`). `days` admite 1–180. Guardar exige el `previewToken` vigente y la misma regla/ventana revisada. Mover líneas existentes exige `confirmChanges:true` explícito en el JSON; `--yes` no lo agrega. Un 409 requiere leer el estado y repetir el preview, no reutilizar una revisión obsoleta.

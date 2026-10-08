@@ -447,3 +447,54 @@ test('integration settings schemas reject secrets, status fabrication, type coer
   assert.equal(json(schema).additionalProperties,false);assert.deepEqual(json(schema).properties.convert_payments_to_currency.type,['string','null']);
   assert.equal(f.requests.length,0);
 });
+
+test('fourteen provider operations map methods/paths and retain queue/cursor/effect metadata', async t=>{
+  const response={data:{provider:'netsuite',operation:'syncs',livemode:false,effect_scope:'team_shared_live_lookup',data:{enqueued:true,nextBefore:'123_sync1',truncated:true}}};
+  const f=await fixture(t,()=>response);
+  const rule={match:'Services',matchType:'contains',itemId:'00123',scope:'domestic'};
+  const cases=[
+    [['zettle','status','team_b'],'GET','/zettle/status'],
+    [['zettle','settings','team_b','--data','{"automaticInvoicing":false,"cardPaymentForm":"28"}','--yes'],'PATCH','/zettle/connection-settings'],
+    [['zettle','sync','team_b','--yes'],'POST','/zettle/sync'],
+    [['zettle','disconnect','team_b','--yes'],'DELETE','/zettle/connection'],
+    [['netsuite','status','team_b'],'GET','/netsuite/status'],
+    [['netsuite','ping','team_b','--yes'],'POST','/netsuite/ping'],
+    [['netsuite','disconnect','team_b','--yes'],'DELETE','/netsuite/connection'],
+    [['netsuite','invoices','sync','team_b','invoice_1','--yes'],'POST','/netsuite/invoices/invoice_1/sync'],
+    [['netsuite','invoices','resync','team_b','invoice_1','--yes'],'POST','/netsuite/invoices/invoice_1/resync'],
+    [['netsuite','invoices','status','team_b','invoice_1'],'GET','/netsuite/invoices/invoice_1/sync'],
+    [['netsuite','syncs','team_b','--before','123_sync1'],'GET','/netsuite/syncs?before=123_sync1'],
+    [['netsuite','items','get','team_b'],'GET','/netsuite/items'],
+    [['netsuite','items','preview','team_b','--data',JSON.stringify({rule,days:30}),'--yes'],'POST','/netsuite/items/preview'],
+    [['netsuite','items','save-rule','team_b','--data',JSON.stringify({rule,previewToken:'version_1',confirmChanges:false}),'--yes'],'POST','/netsuite/items/rules'],
+  ];
+  for(const [args,method,path]of cases){const r=await f.run(['integrations',...args,'--json']);assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r),response);assert.equal(f.requests.at(-1).method,method);assert.equal(f.requests.at(-1).url,'/v2/teams/team_b/integrations'+path);}
+  assert.deepEqual(JSON.parse(f.requests[1].body),{automaticInvoicing:false,cardPaymentForm:'28'});
+  assert.equal(JSON.parse(f.requests[13].body).confirmChanges,false,'--yes must not infer line-move consent');
+  assert.equal(JSON.parse(f.requests[13].body).rule.itemId,'00123');
+});
+
+test('provider partial cleanup exits nonzero with truthful readback; disabled connection does not imply erased credentials',async t=>{
+  const response={data:{provider:'zettle',operation:'disconnect',livemode:true,effect_scope:'connection_mode',data:{completed:false,remote_removed:false,partial_cleanup:true}}};
+  const f=await fixture(t,()=>response);
+  const r=await f.run(['integrations','zettle','disconnect','team_b','--yes','--json']);assert.equal(r.code,1);assert.equal(json(r).error.code,'partial_cleanup');assert.deepEqual(json(r).data,response.data);assert.equal(f.requests.length,1);
+  const g=await fixture(t,()=>({data:{provider:'netsuite',operation:'disconnect',data:{ok:true,credentials_retained:true}}}));
+  const success=await g.run(['integrations','netsuite','disconnect','team_b','--yes','--json']);assert.equal(success.code,0);assert.equal(json(success).data.data.credentials_retained,true);
+});
+
+test('provider preview is required and unknown fields, malformed rules, mode overrides and missing confirmations never reach API',async t=>{
+  const f=await fixture(t);
+  const rule={match:'A',matchType:'exact',itemId:'123'};
+  const cases=[
+    ['zettle','sync','team_b'],['netsuite','disconnect','team_b'],
+    ['zettle','settings','team_b','--data','{"automaticInvoicing":true,"cardPaymentForm":"99"}','--yes'],
+    ['netsuite','items','preview','team_b','--data',JSON.stringify({rule,days:181}),'--yes'],
+    ['netsuite','items','preview','team_b','--data',JSON.stringify({rule,livemode:true}),'--yes'],
+    ['netsuite','items','save-rule','team_b','--data',JSON.stringify({rule}),'--yes'],
+    ['netsuite','items','save-rule','team_b','--data',JSON.stringify({rule,previewToken:'x',confirmChanges:'true'}),'--yes'],
+    ['netsuite','syncs','team_b','--before','arbitrary-token'],
+    ['netsuite','invoices','sync','team_b','../other','--yes'],
+  ];
+  for(const args of cases){const r=await f.run(['integrations',...args,'--json']);assert.equal(r.code,1);assert.ok(json(r).error);}
+  assert.equal(f.requests.length,0);
+});
