@@ -1,17 +1,18 @@
 import { getActiveProfile, getTeamFromKey } from "./config.js";
-import pc from "picocolors";
+import { apiBaseUrl, runtimeOptions } from "./runtime.js";
 
-const BASE_URL = "https://api.gigstack.io/v2";
 
 export class ApiError extends Error {
+  readonly code?: string;
   constructor(public status: number, public body: any) {
     const errObj = body?.error;
-    const msg = errObj?.message || body?.message || `API error ${status}`;
+    const msg = errObj?.message || (typeof errObj === "string" ? errObj : undefined) || body?.message || `API error ${status}`;
     const details = errObj?.details;
     const detailStr = details
       ? (Array.isArray(details) ? details.join(", ") : String(details))
       : "";
     super(detailStr ? `${msg}: ${detailStr}` : msg);
+    this.code = typeof errObj?.code === "string" ? errObj.code : undefined;
   }
 }
 
@@ -19,8 +20,7 @@ export function getApiKey(override?: string): string {
   if (override) return override;
   const profile = getActiveProfile();
   if (!profile) {
-    console.error(pc.red("No autenticado. Ejecuta: gigstack login"));
-    process.exit(1);
+    throw new Error("No autenticado. Ejecuta: gigstack login");
   }
   return profile.apiKey;
 }
@@ -28,36 +28,57 @@ export function getApiKey(override?: string): string {
 export async function api(
   method: string,
   path: string,
-  opts?: { body?: any; query?: Record<string, string>; apiKey?: string; team?: string }
+  opts?: { body?: any; form?: FormData; query?: Record<string, string>; apiKey?: string; team?: string }
 ) {
   const apiKey = getApiKey(opts?.apiKey);
 
-  const url = new URL(`${BASE_URL}${path}`);
+  if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Ruta de API inválida");
+  const url = new URL(`${apiBaseUrl()}${path}`);
+  const team = opts?.team ?? runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
+  const suppliedTeams = [team, opts?.query?.team, opts?.body?.team].filter(Boolean);
+  if (new Set(suppliedTeams).size > 1) throw new Error("El equipo del body/query no coincide con --team");
   if (opts?.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined) url.searchParams.set(k, v);
     }
   }
-  if (opts?.team) url.searchParams.set("team", opts.team);
+  if (team) url.searchParams.set("team", team);
+  const timeout = Number(process.env.GIGSTACK_API_TIMEOUT_MS ?? 30000);
+  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 300000) throw new Error("GIGSTACK_API_TIMEOUT_MS debe estar entre 1 y 300000");
 
   let res: Response;
   try {
     res = await fetch(url.toString(), {
       method,
+      redirect: "error",
+      signal: AbortSignal.timeout(timeout),
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        ...(opts?.form ? {} : { "Content-Type": "application/json" }),
       },
-      body: opts?.body ? JSON.stringify(opts.body) : undefined,
+      body: opts?.form ?? (opts?.body !== undefined ? JSON.stringify(opts.body) : undefined),
     });
   } catch (e: any) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") {
+      const write = !["GET", "HEAD"].includes(method.toUpperCase());
+      throw Object.assign(new Error(write
+        ? "Tiempo de espera agotado; el resultado de la operación es desconocido. Consulta el estado antes de repetirla."
+        : "Tiempo de espera agotado al consultar el API."), { code: "request_timeout", outcome: write ? "unknown" : "not_received" });
+    }
     if (e.code === "ENOTFOUND" || e.cause?.code === "ENOTFOUND") {
       throw new Error("Sin conexión a internet. Verifica tu red.");
     }
     throw new Error(`Error de conexión: ${e.message}`);
   }
 
-  const data = await res.json();
+  let text: string;
+  try { text = await res.text(); }
+  catch {
+    throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: ["GET", "HEAD"].includes(method.toUpperCase()) ? "not_received" : "unknown" });
+  }
+  let data: any;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch { throw new ApiError(res.status, { error: { code: "invalid_response", message: "El API devolvió una respuesta no JSON" } }); }
 
   if (!res.ok) {
     throw new ApiError(res.status, data);
@@ -69,18 +90,23 @@ export async function api(
 /**
  * Resolves the primary team for the current API key.
  * First checks if the JWT contains a team ID and tries GET /teams/{id}.
- * Falls back to the first team in GET /teams.
+ * A supplied --team is authoritative. An ambiguous team list requires selection.
  */
 export async function resolveTeam(apiKey?: string): Promise<any> {
   const key = apiKey || getApiKey();
+  const explicitTeam = runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
+  if (explicitTeam) {
+    const res = await api("GET", `/teams/${encodeURIComponent(explicitTeam)}`, { apiKey: key, team: explicitTeam });
+    return res.data ?? null;
+  }
   const jwtTeamId = getTeamFromKey(key);
 
   // Try direct fetch if JWT has a team
   if (jwtTeamId) {
     try {
-      const res = await api("GET", `/teams/${jwtTeamId}`, { apiKey: key });
+      const res = await api("GET", `/teams/${encodeURIComponent(jwtTeamId)}`, { apiKey: key });
       if (res.data) return res.data;
-    } catch {}
+    } catch (e) { if (!(e instanceof ApiError) || e.status !== 404) throw e; }
   }
 
   // Fallback to list
@@ -90,5 +116,6 @@ export async function resolveTeam(apiKey?: string): Promise<any> {
     const match = teams.find((t: any) => t.id === jwtTeamId);
     if (match) return match;
   }
+  if (teams.length > 1) throw new Error("Hay varios equipos disponibles. Selecciona uno con --team <id>.");
   return teams[0] || null;
 }

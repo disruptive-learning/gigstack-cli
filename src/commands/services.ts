@@ -29,7 +29,7 @@ export function registerServiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   services
@@ -51,7 +51,7 @@ export function registerServiceCommands(program: Command) {
           "Nombre unidad": s.unit_name || "—",
           Impuestos: (s.taxes || []).map((t: any) => `${t.type} ${(t.rate * 100).toFixed(0)}%${t.withholding ? " (ret)" : ""}`).join(", ") || "—",
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   services
@@ -82,7 +82,7 @@ export function registerServiceCommands(program: Command) {
         }));
         success(`Servicio creado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   services
@@ -129,7 +129,7 @@ export function registerServiceCommands(program: Command) {
         const res = await spin("Actualizando servicio…", () => api("PUT", `/services/${id}`, { body, team: opts.team }));
         success(`Servicio ${id} actualizado`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   services
@@ -140,6 +140,6 @@ export function registerServiceCommands(program: Command) {
       try {
         await api("DELETE", `/services/${id}`, { team: opts.team });
         success(`Servicio ${id} eliminado`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

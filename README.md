@@ -523,3 +523,110 @@ npm run build               # Compile to dist/
 - [API Docs](https://docs.gigstack.io)
 - [App](https://app.gigstack.pro)
 - [Help Center](https://helpcenter.gigstack.pro)
+
+### Account administration and automation settings
+
+Choose the account explicitly. `--team` (or `GIGSTACK_TEAM`) applies to every API
+request, including `whoami`, diagnostics and existing commands. An explicit
+account access failure never falls back to another account. Team commands with
+an `<id>` reject a conflicting `--team`.
+
+```bash
+gigstack teams list --json
+gigstack whoami --team team_123 --json
+gigstack teams get team_123 --json
+gigstack teams settings schema --json > team-settings.schema.json
+gigstack teams settings get team_123 --json
+gigstack teams settings update team_123 --file settings.json --json
+```
+
+Account commands return the API envelope (`data` plus any server metadata).
+`settings update` accepts the full settings contract printed by `settings schema`.
+Omitted fields remain unchanged; `null` clears a field, `[]` replaces an array
+with an empty array, and `""` clears a string. An empty group `{}` leaves its
+fields unchanged. Use the canonical API field names from the schema.
+
+Commands accepting an object require exactly one of `--data '<json>'`,
+`--file path.json`, or `--stdin`. Keep secrets in local files or stdin, rather
+than shell arguments. Invalid JSON and missing input fail before sending a
+request.
+
+```bash
+gigstack teams create --file team.json --json
+gigstack teams update team_123 --data '{"brand":{"alias":"Mi empresa"}}' --json
+gigstack teams series list team_123 --json
+gigstack teams series create team_123 --data '{"series":"A","live":0,"test":0}' --json
+gigstack teams series update team_123 A --file folios.json --json
+gigstack teams onboarding-url team_123 --json
+gigstack teams portal-token team_123 --expires-in 1h --json
+gigstack teams sat-connection team_123 --cert-file csd.cer --key-file csd.key --password-file csd-password.txt --json
+gigstack teams sign-manifest team_123 --file manifest.json --yes --json
+gigstack teams delete team_123 --yes --json
+```
+
+`sign-manifest` takes `key` and `cert` as base64 strings and `password` in the
+input object. CSD upload sends multipart certificate/key files and preserves
+password whitespace, removing only a final line ending. Portal tokens and
+onboarding URLs should be handled as credentials. Team deletion is a scheduled
+server operation, subject to its resource/integration eligibility checks.
+
+### Members and invitations
+
+```bash
+gigstack teams members list team_123 --json
+gigstack teams members add team_123 user_456 --role viewer --json
+gigstack teams members update team_123 user_456 --data '{"role":"viewer","permissions":{"invoices":"viewer","payments":"none"}}' --json
+gigstack teams members remove team_123 user_456 --yes --json
+gigstack teams transfer-ownership team_123 user_456 --yes --json
+gigstack teams invitations list team_123 --json
+gigstack teams invitations create team_123 --email person@example.com --role viewer --json
+gigstack teams invitations create team_123 --email person@example.com --no-send-email --json
+gigstack teams invitations get team_123 invite_123 --json
+gigstack teams invitations resend team_123 invite_123 --json
+gigstack teams invitations revoke team_123 invite_123 --yes --json
+gigstack teams invitations accept --file invitation.json --json
+gigstack teams invitations decline --file invitation.json --json
+```
+
+`members add` attaches an existing user from the same billing account; it does
+not send an email invitation. Role/permission edits, removal and ownership
+transfer require the current owner's user identity. Invite administration
+requires an authenticated user admin. A user-scoped MCP token can be supplied
+via `GIGSTACK_API_KEY`; a team API key cannot impersonate its creator. Invite
+accept/decline takes `{"token":"..."}` and a Firebase ID token for the recipient,
+including before they have an active team. The server remains authoritative
+for role, tenant and plan checks; a 403 is returned as an error, not bypassed.
+
+Invitations report delivery status separately from creation. A successful
+create response alone does not mean an email was delivered.
+
+### Staging, CI and machine output
+
+Use `GIGSTACK_API_BASE_URL` or `--base-url` with the complete deployed API prefix,
+including `/v2`. There is no implicit staging hostname. HTTPS is required except
+for local emulators on `localhost`/`127.0.0.1`/`::1`; URL credentials, queries and
+fragments are rejected. Redirects are not followed with your bearer credential.
+`login` saves the selected base URL with the profile so subsequent profile use
+continues against that environment. Environment credentials take precedence over
+saved profiles and require the environment URL to be set explicitly.
+
+```bash
+export GIGSTACK_API_BASE_URL='https://YOUR-STAGING-GATEWAY/v2'
+# Set GIGSTACK_API_KEY locally to a staging credential.
+gigstack teams settings get team_123 --json
+npm ci
+npm run typecheck
+npm test
+```
+
+In `--json` mode stdout contains the JSON result; progress and human diagnostics
+use stderr. Errors return `{"error":{"message":"..."}}` and exit nonzero,
+including errors from existing commands. HTTP failures include `status`.
+Interactive prompts never consume piped input: provide all required values;
+destructive account actions and manifest signing require `--yes` in automation.
+The default request timeout is 30 seconds (`GIGSTACK_API_TIMEOUT_MS`, 1–300000).
+A write timeout reports `outcome: "unknown"`; check persisted state before retrying.
+The CLI never automatically retries a mutation.
+
+The offline suite uses a local HTTP fixture and synthetic credentials. It does
+not send invitations, access production, or establish deployment readiness.

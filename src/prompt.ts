@@ -1,9 +1,15 @@
 import { createInterface } from "node:readline";
 import pc from "picocolors";
+import { isJsonMode } from "./output.js";
 
-const rl = () => createInterface({ input: process.stdin, output: process.stdout });
+function requireInteractive() {
+  if (!process.stdin.isTTY || isJsonMode()) throw new Error("Se requiere entrada explícita; usa las opciones del comando o --yes para confirmar, sin preguntas interactivas");
+}
+
+const rl = () => createInterface({ input: process.stdin, output: process.stderr });
 
 export function ask(question: string, defaultVal?: string): Promise<string> {
+  requireInteractive();
   const suffix = defaultVal ? pc.dim(` (${defaultVal})`) : "";
   return new Promise((resolve) => {
     const r = rl();
@@ -14,21 +20,20 @@ export function ask(question: string, defaultVal?: string): Promise<string> {
   });
 }
 
-export function askRequired(question: string): Promise<string> {
-  return new Promise(async (resolve) => {
-    let val = "";
-    while (!val) {
-      val = await ask(question);
-      if (!val) console.log(pc.red("  Campo requerido"));
-    }
-    resolve(val);
-  });
+export async function askRequired(question: string): Promise<string> {
+  let val = "";
+  while (!val) {
+    val = await ask(question);
+    if (!val) console.error(pc.red("  Campo requerido"));
+  }
+  return val;
 }
 
 export function askHidden(question: string): Promise<string> {
+  requireInteractive();
   return new Promise((resolve) => {
     const r = rl();
-    process.stdout.write(`${pc.bold(question)}: `);
+    process.stderr.write(`${pc.bold(question)}: `);
     if (process.stdin.setRawMode) {
       process.stdin.setRawMode(true);
       process.stdin.resume();
@@ -38,7 +43,7 @@ export function askHidden(question: string): Promise<string> {
         if (c === "\n" || c === "\r") {
           process.stdin.setRawMode!(false);
           process.stdin.removeListener("data", onData);
-          process.stdout.write("\n");
+          process.stderr.write("\n");
           r.close();
           resolve(input.trim());
         } else if (c === "\u007f" || c === "\b") {
@@ -60,7 +65,8 @@ export function askHidden(question: string): Promise<string> {
 }
 
 export async function select(question: string, options: { label: string; value: string }[]): Promise<string> {
-  console.log(pc.bold(question));
+  requireInteractive();
+  console.error(pc.bold(question));
   options.forEach((o, i) => console.log(`  ${pc.dim(`${i + 1})`)} ${o.label}`));
   const answer = await ask("Selecciona", "1");
   const idx = parseInt(answer) - 1;

@@ -31,7 +31,7 @@ export function registerReceiptCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   receipts
@@ -43,7 +43,7 @@ export function registerReceiptCommands(program: Command) {
         const res = await spin("Timbrando recibo…", () => api("POST", `/receipts/${id}/stamp`, { team: opts.team }));
         success(`Recibo timbrado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   receipts
@@ -54,6 +54,6 @@ export function registerReceiptCommands(program: Command) {
       try {
         await api("DELETE", `/receipts/${id}`, { team: opts.team });
         success(`Recibo ${id} cancelado`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

@@ -37,7 +37,7 @@ export function registerClientCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -60,7 +60,7 @@ export function registerClientCommands(program: Command) {
           Válido: c.is_valid ? "Sí" : "No",
           Creado: formatDate(c.created_at),
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -98,7 +98,7 @@ export function registerClientCommands(program: Command) {
         success(`Cliente creado: ${res.data.id}`);
         if (!isJsonMode()) console.log(`  RFC: ${res.data.tax_id}  Email: ${res.data.email || "—"}`);
         else printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -147,7 +147,7 @@ export function registerClientCommands(program: Command) {
         const res = await spin("Actualizando cliente…", () => api("PUT", `/clients/${id}`, { body, team: opts.team }));
         success(`Cliente ${id} actualizado`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -167,7 +167,7 @@ export function registerClientCommands(program: Command) {
             email: c.email || "—",
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -180,7 +180,7 @@ export function registerClientCommands(program: Command) {
         success("Validación completada");
         if (isJsonMode()) printJson(res.data);
         else printKeyValue(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -212,7 +212,7 @@ export function registerClientCommands(program: Command) {
           const expires = new Date(data.expires_at > 1e12 ? data.expires_at : data.expires_at * 1000);
           console.log(pc.dim(`  Expira: ${expires.toISOString().slice(0, 10)} (5 días)`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -223,6 +223,6 @@ export function registerClientCommands(program: Command) {
       try {
         await api("DELETE", `/clients/${id}`, { team: opts.team });
         success(`Cliente ${id} eliminado`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

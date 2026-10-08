@@ -42,7 +42,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -70,7 +70,7 @@ export function registerInvoiceCommands(program: Command) {
           Complementos: i.payment_complements ?? "—",
           Creado: formatDate(i.created_at),
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -186,7 +186,7 @@ export function registerInvoiceCommands(program: Command) {
         success(`Factura creada: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
         else console.log(`  Total: ${formatMoney(res.data.total, res.data.currency)}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -204,7 +204,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.attachments?.length) {
           console.log(pc.dim(`  Adjuntos: ${res.data.attachments.join(", ")}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -220,7 +220,7 @@ export function registerInvoiceCommands(program: Command) {
           team: opts.team,
         }));
         success(`Factura ${uuid} cancelada`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -240,7 +240,7 @@ export function registerInvoiceCommands(program: Command) {
             status: i.status || "—",
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -254,7 +254,7 @@ export function registerInvoiceCommands(program: Command) {
         const files = res.data;
         if (files.pdf) console.log(`PDF: ${files.pdf}`);
         if (files.xml) console.log(`XML: ${files.xml}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -283,7 +283,7 @@ export function registerInvoiceCommands(program: Command) {
         }
         if (saved.length === 0) error("No se encontraron archivos para esta factura");
         else success(`Descargado: ${saved.join(", ")}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Drafts
@@ -305,7 +305,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   drafts
@@ -317,7 +317,7 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Timbrando borrador…", () => api("POST", `/invoices/draft/${uuid}/stamp`, { team: opts.team }));
         success(`Borrador timbrado: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Credit notes
@@ -337,7 +337,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Complements
@@ -359,7 +359,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Descarga Masiva SAT
@@ -402,7 +402,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.has_more && res.next) {
           console.log(pc.dim(`\n... más resultados. Usa --next ${res.next} para la siguiente página`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -437,7 +437,7 @@ export function registerInvoiceCommands(program: Command) {
           Versión: i.version || "—",
           "No. certificado": i.certificate_number || "—",
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -452,7 +452,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.credit_charged !== undefined) {
           console.log(pc.dim(`  Crédito cobrado: ${res.data.credit_charged ? "sí" : "no"}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -470,7 +470,7 @@ export function registerInvoiceCommands(program: Command) {
         writeFileSync(path, buf);
         if (isJsonMode()) return printJson({ path, bytes: buf.length });
         success(`PDF descargado: ${path}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -489,7 +489,7 @@ export function registerInvoiceCommands(program: Command) {
         if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_available: false });
         success(`PDF descargado: ${path}`);
         console.log(pc.dim("  Nota: el XML del SAT solo está disponible desde app.gigstack.pro/gastos"));
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -525,7 +525,7 @@ export function registerInvoiceCommands(program: Command) {
         } else if (d.status === "active") {
           console.log(pc.dim("→ Descarga Masiva está habilitada. Use 'gigstack invoices sat list' para ver facturas"));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -571,7 +571,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.type) {
           console.log(pc.dim(`  Tipo: ${res.data.type === "included" ? "incluida en plan" : "add-on"}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -588,7 +588,7 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Desactivando…", () => api("POST", "/invoices/download/deactivate", { team: opts.team }));
         if (isJsonMode()) return printJson(res);
         success(res.message || "Descarga Masiva desactivada");
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Schedule sub-group (read-only + history; saving requires multi-field config — defer to web UI)
@@ -628,7 +628,7 @@ export function registerInvoiceCommands(program: Command) {
           });
           if (d.prodigia.message) console.log(pc.dim(`\n  ${d.prodigia.message}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   schedule
@@ -653,7 +653,7 @@ export function registerInvoiceCommands(program: Command) {
             fecha: formatDate(h.createdAt),
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   schedule
@@ -681,6 +681,6 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Guardando configuración…", () => api("PUT", "/invoices/download/schedule", { body, team: opts.team }));
         if (isJsonMode()) return printJson(res.data);
         success(res.message || "Configuración guardada");
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

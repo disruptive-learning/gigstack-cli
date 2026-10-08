@@ -25,7 +25,7 @@ export function registerWebhookCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   webhooks
@@ -41,7 +41,7 @@ export function registerWebhookCommands(program: Command) {
         const res = await spin("Creando webhook…", () => api("POST", "/webhooks", { body, team: opts.team }));
         success(`Webhook creado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   webhooks
@@ -52,6 +52,6 @@ export function registerWebhookCommands(program: Command) {
       try {
         await api("DELETE", `/webhooks/${id}`, { team: opts.team });
         success(`Webhook ${id} eliminado`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

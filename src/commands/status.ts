@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api, resolveTeam } from "../api.js";
-import { formatMoney, spin, isJsonMode, printJson } from "../output.js";
+import { formatMoney, spin, isJsonMode, printJson, error } from "../output.js";
 
 function sum(items: any[], key = "total"): number {
   return items.reduce((s, i) => s + (i?.[key] || 0), 0);
@@ -283,7 +283,7 @@ export function registerStatusCommand(program: Command) {
 
         console.log();
       } catch (e: any) {
-        console.error(pc.red(`✗ ${e.message}`));
+        error(e);
       }
     });
 }

@@ -37,7 +37,7 @@ export function registerPaymentCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   payments
@@ -60,7 +60,7 @@ export function registerPaymentCommands(program: Command) {
           "Link de pago": p.short_url || "—",
           Creado: formatDate(p.created_at),
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   payments
@@ -89,7 +89,7 @@ export function registerPaymentCommands(program: Command) {
         success(`Pago solicitado: ${res.data.id}`);
         if (res.data.short_url) console.log(`  Link: ${res.data.short_url}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   payments
@@ -118,7 +118,7 @@ export function registerPaymentCommands(program: Command) {
         const res = await spin("Registrando pago…", () => api("POST", "/payments/register", { body, team: opts.team }));
         success(`Pago registrado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   payments
@@ -130,6 +130,6 @@ export function registerPaymentCommands(program: Command) {
         const res = await spin("Procesando reembolso…", () => api("POST", `/payments/${id}/refund`, { team: opts.team }));
         success(`Pago ${id} reembolsado`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

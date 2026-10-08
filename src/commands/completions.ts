@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { error, isJsonMode, printJson } from "../output.js";
 
 const COMMANDS: Record<string, string[]> = {
   "": [
@@ -110,6 +111,7 @@ export function registerCompletionsCommand(program: Command) {
     .description("Generar script de autocompletado para tu shell")
     .argument("<shell>", "Shell: bash, zsh, o fish")
     .action((shell: string) => {
+      if (isJsonMode() && ["bash", "zsh", "fish"].includes(shell)) return printJson({ shell, script: shell === "bash" ? bashScript() : shell === "zsh" ? zshScript() : fishScript() });
       switch (shell) {
         case "bash":
           process.stdout.write(bashScript());
@@ -121,7 +123,7 @@ export function registerCompletionsCommand(program: Command) {
           process.stdout.write(fishScript());
           break;
         default:
-          console.error(`Shell no soportado: ${shell}. Usa bash, zsh, o fish.`);
+          error(`Shell no soportado: ${shell}. Usa bash, zsh, o fish.`);
           process.exit(1);
       }
     });

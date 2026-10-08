@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { isJsonMode, printJson } from "../output.js";
+import { isJsonMode, printJson, error } from "../output.js";
 
 interface ContextTopic {
   title: string;
@@ -418,7 +418,7 @@ export function registerContextCommand(program: Command) {
 
       const t = KNOWLEDGE[topic.toLowerCase()];
       if (!t) {
-        console.error(pc.red(`Unknown topic: ${topic}`));
+        error(`Unknown topic: ${topic}`);
         console.log(pc.dim(`Available: ${TOPIC_LIST.join(", ")}`));
         process.exit(1);
       }

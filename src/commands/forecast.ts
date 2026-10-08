@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api, resolveTeam } from "../api.js";
-import { formatMoney, spin, isJsonMode, printJson } from "../output.js";
+import { formatMoney, spin, isJsonMode, printJson, error } from "../output.js";
 
 const DAY_MS = 86400000;
 
@@ -403,7 +403,7 @@ export function registerForecastCommand(program: Command) {
 
         console.log();
       } catch (e: any) {
-        console.error(pc.red(`✗ ${e.message}`));
+        error(e);
       }
     });
 }

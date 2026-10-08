@@ -321,7 +321,7 @@ export function registerExplainCommand(program: Command) {
 
         console.log("");
       } catch (e: any) {
-        error(e.message);
+        error(e);
       }
     });
 }
