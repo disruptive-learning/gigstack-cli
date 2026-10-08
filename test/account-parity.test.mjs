@@ -371,3 +371,79 @@ test('credential revocation is explicit and webhook cursors are not lost', async
     if(method==='GET') assert.equal(url.searchParams.get('cursor'),'opaque');
   }
 });
+
+test('fiscal handoff routes preserve shared scope and uncertain state without secret arguments', async t => {
+  const response = { data: { id: 'session_1', status: 'outcome_unknown', can_submit: false, effect_scope: 'team_shared', provider_environment: 'production', credential_livemode: false, upload_url: 'https://example.invalid/account/fiscal-upload/session_1?team=team_b', recovery_available_at: 123 } };
+  const f = await fixture(t, () => response);
+  const cases = [
+    [['teams','fiscal','status','team_b'], 'GET', '/v2/teams/team_b/fiscal-status'],
+    [['teams','fiscal','sessions','create','team_b','--purpose','manifest','--yes'], 'POST', '/v2/teams/team_b/fiscal-upload-sessions'],
+    [['teams','fiscal','sessions','get','team_b','session_1'], 'GET', '/v2/teams/team_b/fiscal-upload-sessions/session_1'],
+    [['teams','fiscal','sessions','cancel','team_b','session_1','--yes'], 'DELETE', '/v2/teams/team_b/fiscal-upload-sessions/session_1'],
+    [['teams','fiscal','sessions','reconcile','team_b','session_1','--yes'], 'POST', '/v2/teams/team_b/fiscal-upload-sessions/session_1/reconcile'],
+  ];
+  for (const [args,method,path] of cases) {
+    const r = await f.run([...args,'--json']); assert.equal(r.code,0,r.stderr); assert.deepEqual(json(r),response);
+    assert.equal(f.requests.at(-1).method,method); assert.equal(f.requests.at(-1).url,path);
+  }
+  assert.deepEqual(JSON.parse(f.requests[1].body),{purpose:'manifest'});
+  assert.deepEqual(JSON.parse(f.requests[4].body),{});
+});
+
+test('fiscal invalid purpose, context conflict, missing confirmation and browser-only actions never call API', async t => {
+  const f = await fixture(t);
+  const cases = [
+    ['teams','fiscal','status','team_b','--team','other'],
+    ['teams','fiscal','sessions','create','team_b','--purpose','csd'],
+    ['teams','fiscal','sessions','create','team_b','--purpose','unknown','--yes'],
+    ['teams','fiscal','sessions','create','team_b','--purpose','csd','--yes','--password','secret'],
+    ['teams','fiscal','sessions','cancel','team_b','session_1'],
+    ['teams','fiscal','sessions','reconcile','team_b','session_1'],
+    ['teams','fiscal','sessions','submit','team_b','session_1','--yes'],
+    ['teams','fiscal','sessions','resolve','team_b','session_1','--yes'],
+  ];
+  for (const args of cases) { const r=await f.run([...args,'--json']); assert.equal(r.code,1); assert.ok(json(r).error); }
+  assert.equal(f.requests.length,0);
+});
+
+test('integration catalog and provider reads use finite canonical IDs and preserve backend availability', async t => {
+  const response={data:{team_id:'team_b',provider:'stripe',available:false,reason:'region_unsupported',effect_scope:'team_shared'}};
+  const f=await fixture(t,()=>response);
+  const list=await f.run(['integrations','catalog','team_b','--json']);assert.equal(list.code,0);assert.deepEqual(json(list),response);
+  assert.equal(f.requests[0].url,'/v2/teams/team_b/integrations/catalog');
+  const get=await f.run(['integrations','get','team_b','woocommerce','--team','team_b','--json']);assert.equal(get.code,0);
+  assert.equal(f.requests[1].url,'/v2/teams/team_b/integrations/woocommerce?team=team_b');
+  assert.equal((await f.run(['integrations','get','team_b','woocomerce','--json'])).code,1);
+  assert.equal(f.requests.length,2);
+});
+
+test('all thirteen integration settings commands send exact patch, retaining false/null and leading zero codes', async t => {
+  const f=await fixture(t);
+  const commands={
+    stripe:{automatic_invoicing:false,automatic_refunds:true,convert_payments_to_currency:null,default_payment_method:'01'},
+    adyen:{ppd_flow:false,convert_payments_to_currency:'MXN'}, paypal:{service_description:'',payment_form:null},
+    conekta:{automatic_invoicing:false},openpay:{automatic_invoicing:true},clip:{automatic_invoicing:false},
+    clockpms:{automatic_invoicing:false},pagoralia:{automatic_invoicing:true},dlocal:{automatic_invoicing:false},
+    woocommerce:{automatic_invoicing:false},mercadopago:{automatic_invoicing:true},
+    shopify:{automatic_invoicing:false,default_payment_form:'04'},bank:{voucher_required:false,country:'MEX',account_number:null,clabe:'012345678901234567'},
+  };
+  for(const [provider,body] of Object.entries(commands)){
+    const r=await f.run(['integrations',provider,'settings','team_b','--stdin','--yes','--json'],{input:JSON.stringify(body)});
+    assert.equal(r.code,0,r.stderr);json(r);
+    assert.equal(f.requests.at(-1).url,`/v2/teams/team_b/integrations/${provider}/settings`);
+    assert.equal(f.requests.at(-1).method,'PATCH');assert.deepEqual(JSON.parse(f.requests.at(-1).body),body);
+  }
+  assert.equal(f.requests.length,13);
+});
+
+test('integration settings schemas reject secrets, status fabrication, type coercion and unconfirmed writes offline', async t=>{
+  const f=await fixture(t);
+  for(const body of [{api_key:'secret'},{completed:true},{automatic_invoicing:'false'},{convert_payments_to_currency:'mxn'},{default_payment_method:4}]){
+    const r=await f.run(['integrations','stripe','settings','team_b','--data',JSON.stringify(body),'--yes','--json']);assert.equal(r.code,1);assert.ok(json(r).error);
+  }
+  assert.equal((await f.run(['integrations','stripe','settings','team_b','--data','{"automatic_invoicing":true}','--json'])).code,1);
+  assert.equal((await f.run(['integrations','bank','settings','team_b','--data','{"country":null}','--yes','--json'])).code,1);
+  const schema=await f.run(['integrations','stripe','schema','--json']);assert.equal(schema.code,0);
+  assert.equal(json(schema).additionalProperties,false);assert.deepEqual(json(schema).properties.convert_payments_to_currency.type,['string','null']);
+  assert.equal(f.requests.length,0);
+});

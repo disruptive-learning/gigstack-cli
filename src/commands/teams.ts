@@ -1,3 +1,4 @@
+import { registerFiscalSessionCommands } from "./fiscal-sessions.js";
 import { readFile } from "node:fs/promises";
 import { Command } from "commander";
 import { api } from "../api.js";
@@ -22,6 +23,7 @@ async function call(method: string, path: string, body?: Record<string, any>) {
 
 export function registerTeamCommands(program: Command) {
   const teams = program.command("teams").description("Gestionar equipos, configuración y accesos");
+  registerFiscalSessionCommands(teams);
   teams.command("list").description("Listar equipos accesibles")
     .option("--limit <n>", "Tamaño de página", "20").option("--next <cursor>", "Cursor")
     .action(async opts => call("GET", `/teams?limit=${encodeURIComponent(opts.limit)}${opts.next ? `&next=${encodeURIComponent(opts.next)}` : ""}`));

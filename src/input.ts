@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Command } from "commander";
+import { runtimeOptions } from "./runtime.js";
 import { confirm } from "./prompt.js";
 
 export function withJsonInput(command: Command): Command {
@@ -35,3 +36,10 @@ export const segment = (value: string): string => {
   if (!value.trim() || value === "." || value === ".." || /[\/\\\x00-\x1f]/.test(value)) throw new Error("Identificador inválido");
   return encodeURIComponent(value);
 };
+
+/** Explicit resource target must match an explicit invocation context. */
+export function teamTarget(id: string): string {
+  const selected = runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
+  if (selected && selected !== id) throw new Error("El ID del equipo no coincide con --team/GIGSTACK_TEAM");
+  return `/teams/${segment(id)}`;
+}

@@ -824,3 +824,31 @@ El archivo privado contiene el token y su URL MCP. No los pegues en registros ni
 los agregues al repositorio. Si falla la escritura después de emitirlos, la CLI
 sale con código `1` y `outcome:"issued"`; revisa las credenciales antes de
 revocarlas o crear otras.
+
+### Carga fiscal privada en navegador
+
+El agente puede crear, leer, cancelar o conciliar una sesión y consultar el estado fiscal. Los archivos, contraseñas, consentimiento del manifiesto y liberación de resultados inciertos se manejan en el navegador autenticado del propietario:
+
+```bash
+gigstack teams fiscal status TEAM_ID --json
+gigstack teams fiscal sessions create TEAM_ID --purpose csd --yes --json
+gigstack teams fiscal sessions get TEAM_ID SESSION_ID --json
+gigstack teams fiscal sessions reconcile TEAM_ID SESSION_ID --yes --json
+gigstack teams fiscal sessions cancel TEAM_ID SESSION_ID --yes --json
+```
+
+`--purpose` admite `csd`, `fiel`, `pfx` o `manifest`. Abre `data.upload_url` con la cuenta propietaria que creó la sesión. `--yes` solo confirma crear/cancelar/conciliar la sesión: no sustituye el consentimiento de la persona que carga o firma. La configuración es compartida entre modo prueba y real; `provider_environment` indica si el proveedor opera en producción. `outcome_unknown` no confirma éxito ni autoriza repetir la carga. `reconcile` consulta evidencia de esa operación sin volver a enviar archivos; la liberación requiere consentimiento explícito en navegador después del plazo indicado por el servidor. No hay comandos de sesión `submit` ni `resolve`.
+
+### Catálogo y ajustes de integraciones
+
+```bash
+gigstack integrations catalog TEAM_ID --json
+gigstack integrations get TEAM_ID stripe --json
+gigstack integrations stripe schema --json
+gigstack integrations stripe settings TEAM_ID --data '{"automatic_invoicing":false,"test_only":true}' --yes --json
+gigstack integrations bank settings TEAM_ID --file bank-settings.json --yes --json
+```
+
+Hay comandos `schema` y `settings` para `stripe`, `adyen`, `paypal`, `conekta`, `openpay`, `clip`, `clockpms`, `pagoralia`, `dlocal`, `woocommerce`, `mercadopago`, `shopify` y `bank`. El esquema local limita los campos admitidos y conserva `false`, cadenas vacías y `null` donde el API lo permite. Se requiere `--yes` para ajustes compartidos. El servidor sigue validando rol, cuenta y disponibilidad regional.
+
+El catálogo incluye 25 proveedores y distingue su disponibilidad y alcance. Leer estado almacenado no confirma conectividad remota. Estos ajustes no guardan API keys/contraseñas, no completan conexiones y no aceptan `completed:true`. Las operaciones particulares de proveedores y sus requisitos de identidad se documentan por separado.
