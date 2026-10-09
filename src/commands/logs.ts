@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import {
   deliveryEvents,
   deliveryStatuses,
@@ -11,7 +12,7 @@ export function registerLogCommands(program: Command) {
   const logs = program
     .command("logs")
     .description(
-      "Observabilidad por equipo/modo; metadatos y estructura redactada, sin secretos ni payload original",
+      "Observabilidad por equipo/modo; detalle API con valores fiscales permitidos y redacción explícita",
     );
   for (const [name, endpoint] of [
     ["api", "api-logs"],
@@ -97,21 +98,40 @@ export function registerLogCommands(program: Command) {
           .filter((key) => opts[key] !== undefined)
           .map((key) => [key, String(opts[key])]),
       );
-      printJson(logProjection(await api("GET", path, { query }), name));
+      const page = logProjection(await api("GET", path, { query }), name);
+      if (name === "api" && page.data.some((row: any) => row.team_id !== team))
+        throw new Error("Equipo del log cambió");
+      printJson(page);
     });
-    group
+    const detail = group
       .command("get <teamId> <logId>")
       .description(
-        "Detalle con estructura de cuerpo redactada; no devuelve cuerpos, headers ni URLs privados",
-      )
-      .action(async (team, id) =>
-        printJson(
-          logProjection(
-            await api("GET", `${teamTarget(team)}/${endpoint}/${segment(id)}`),
-            name,
-            true,
-          ),
-        ),
+        "Detalle redactado; API conserva valores fiscales permitidos, sin headers ni URLs privados",
       );
+    if (name === "api")
+      detail.option(
+        "--output <path>",
+        "Guardar el detalle redactado JSON sin sobrescribir archivos",
+      );
+    detail.action(async (team, id, opts) => {
+      const result = logProjection(
+        await api("GET", `${teamTarget(team)}/${endpoint}/${segment(id)}`),
+        name,
+        true,
+      );
+      if (name === "api" && result.data.team_id !== team)
+        throw new Error("Equipo del log cambió");
+      if (opts.output) {
+        await writeFile(opts.output, JSON.stringify(result, null, 2) + "\n", {
+          flag: "wx",
+        });
+        printJson({
+          success: true,
+          output: opts.output,
+          log_id: result.data.id,
+          redaction: result.data.payload_redaction ?? result.data.redaction,
+        });
+      } else printJson(result);
+    });
   }
 }

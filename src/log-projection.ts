@@ -1,3 +1,4 @@
+import { safeApiPayload } from "./api-log-payload.js";
 import webhookConfiguration from "./schemas/webhook-configuration-request.schema.json";
 export const deliveryEvents =
   webhookConfiguration.create.properties.events.items.enum;
@@ -99,7 +100,8 @@ function row(value: any, kind: string, detail: boolean) {
       !number(value.status_code)
     )
       throw new Error("Metadatos API inválidos");
-    keys.push("method", "endpoint", "status_code");
+    if (!id(value.team_id)) throw new Error("Equipo del log inválido");
+    keys.push("team_id", "method", "endpoint", "status_code");
   } else {
     if (
       !number(value.updated_at) ||
@@ -146,6 +148,17 @@ function row(value: any, kind: string, detail: boolean) {
     );
   }
   const result = pick(value, keys);
+  if (detail && kind === "api") {
+    if (value.payload_redaction !== "allowlisted_structured_values_v1")
+      throw new Error("Vista redactada no confirmada");
+    result.payload_redaction = value.payload_redaction;
+    for (const field of [
+      "request_payload",
+      "query_payload",
+      "response_payload",
+    ])
+      result[field] = safeApiPayload(value[field]);
+  }
   if (detail)
     for (const key of kind === "api"
       ? ["request_shape", "query_shape", "response_shape"]

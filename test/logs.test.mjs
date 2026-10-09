@@ -86,6 +86,15 @@ test("log commands preserve bounded pagination and safe detail envelopes", async
                 timestamp: 1,
                 livemode: false,
                 redaction: "metadata_and_body_shape",
+                team_id: "team_b",
+                payload_redaction: "allowlisted_structured_values_v1",
+                request_payload: {
+                  amount: 116,
+                  currency: "COP",
+                  client: { document_type: "31", name: "PRIVATE" },
+                },
+                query_payload: null,
+                response_payload: { success: true },
                 method: "GET",
                 endpoint: "/v2/invoices",
                 status_code: 200,
@@ -148,6 +157,44 @@ test("log commands preserve bounded pagination and safe detail envelopes", async
     );
     assert.equal(f.requests.at(-1).url, `/v2/teams/team_b/${route}/log_1`);
   }
+  const folder = await mkdtemp(join(tmpdir(), "gigstack-log-export-"));
+  t.after(() => rm(folder, { recursive: true, force: true }));
+  const output = join(folder, "log.json");
+  const exported = await f.run([
+    "logs",
+    "api",
+    "get",
+    "team_b",
+    "log_1",
+    "--output",
+    output,
+    "--json",
+  ]);
+  assert.equal(exported.code, 0, exported.stderr);
+  const saved = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(saved.data.request_payload.amount, 116);
+  assert.equal(saved.data.request_payload.client.document_type, "31");
+  assert.equal(
+    saved.data.request_payload.client.name.$redacted,
+    "value_not_allowlisted",
+  );
+  assert.equal(JSON.stringify(saved).includes("PRIVATE"), false);
+  assert.notEqual(
+    (
+      await f.run([
+        "logs",
+        "api",
+        "get",
+        "team_b",
+        "log_1",
+        "--output",
+        output,
+        "--json",
+      ])
+    ).code,
+    0,
+  );
+  assert.deepEqual(JSON.parse(await readFile(output, "utf8")), saved);
   assert.equal(
     f.requests.every((req) => req.method === "GET"),
     true,
