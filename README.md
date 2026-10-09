@@ -1307,3 +1307,15 @@ Los logs conservan el estado `retrying` y los campos nullable `resource_id`, `at
 es sólo una referencia histórica, no acredita existencia ni acceso actual. Los filtros
 admiten los 26 eventos, incluidos `teams.*`. El CLI valida/proyecta metadatos y estructura
 redactada; no imprime campos inesperados de respuesta, destino o credenciales.
+
+`payment-links list|get|create|update|delete|operation` manages the full reusable-link
+configuration for the selected team and credential mode. Use `payment-links schema
+create|update|delete` for JSON fields; the CLI derives `expected_livemode` and rejects
+mode overrides in JSON. Persist `--operation-id` before the first write; update/delete
+also need `--expected-revision` from GET and explicit `--yes` or interactive review.
+After transport loss, use `payment-links operation <same-uuid>` with the original
+team/mode. No automatic write retries or new IDs. Historical completion may return
+`data:null`. Deletion is allowed after use and keeps generated payment history.
+Use `short_url ?? url`; staging has a full URL and no inferred working shortener.
+Saving methods/automations does not charge or stamp; current public payer execution
+remains Stripe-only. Follow list cursors with identical filters, including limit.

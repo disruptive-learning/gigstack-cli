@@ -1,3 +1,4 @@
+import { registerPaymentLinkCommands } from "./commands/payment-links.js";
 import { registerAccountInvitationCommands } from "./commands/account-invitations.js";
 import { Command } from "commander";
 import pc from "picocolors";
@@ -60,6 +61,7 @@ registerPayCommand(program);
 registerClientCommands(program);
 registerInvoiceCommands(program);
 registerPaymentCommands(program);
+registerPaymentLinkCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
