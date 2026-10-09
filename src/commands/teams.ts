@@ -1,3 +1,4 @@
+import { safeRecipientInbox } from "../recipient-inbox.js";
 import { safeEmailTemplates } from "../email-templates.js";
 import { invitationPayload } from "../invitation-contract.js";
 import { approvalTeam, membershipTarget, prepareApproval } from "../account-approvals.js";
@@ -139,6 +140,14 @@ export function registerTeamCommands(program: Command) {
     });
 
   const invites = teams.command("invitations").description("Editor/viewer directos; admin prepara revisión del propietario, sin envío ni ingreso");
+  invites.command("inbox").description("Invitaciones pendientes dirigidas al correo Auth actual; solo metadatos, sin token ni aceptación")
+    .option("--limit <n>", "Tamaño de página", "25").option("--cursor <cursor>", "Cursor de esta identidad")
+    .action(async opts => {
+      const limit = Number(opts.limit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("limit debe ser 1–100");
+      const result = await api("GET", "/teams/invitations/inbox", { identityOnly: true, query: { limit: String(limit), ...(opts.cursor ? {cursor:opts.cursor} : {}) } });
+      printJson(safeRecipientInbox(result));
+    });
   invites.command("list <id>").action(async id => call("GET", `${target(id)}/invitations`));
   invites.command("get <id> <inviteId>")
     .action(async (id, inviteId) => call("GET", `${target(id)}/invitations/${segment(inviteId)}`));

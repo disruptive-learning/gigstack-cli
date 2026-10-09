@@ -36,7 +36,7 @@ export function getApiKey(override?: string): string {
 export async function api(
   method: string,
   path: string,
-  opts?: { body?: any; form?: FormData; sideEffect?: boolean; idempotencyKey?: string; query?: Record<string, string>; apiKey?: string; team?: string }
+  opts?: { body?: any; form?: FormData; sideEffect?: boolean; idempotencyKey?: string; query?: Record<string, string>; apiKey?: string; team?: string; identityOnly?: boolean }
 ) {
   const apiKey = getApiKey(opts?.apiKey);
   if (opts?.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
@@ -51,7 +51,7 @@ export async function api(
       if (v !== undefined) url.searchParams.set(k, v);
     }
   }
-  if (team) url.searchParams.set("team", team);
+  if (team && !opts?.identityOnly) url.searchParams.set("team", team);
   const timeout = Number(process.env.GIGSTACK_API_TIMEOUT_MS ?? 30000);
   if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 300000) throw new Error("GIGSTACK_API_TIMEOUT_MS debe estar entre 1 y 300000");
 
