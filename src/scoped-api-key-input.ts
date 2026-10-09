@@ -10,7 +10,7 @@ function fields(value: Record<string, unknown>, expected: string[]) {
 }
 function ids(value: unknown, action = false, allowEmpty = false): string[] {
   if (!Array.isArray(value) || value.length > (action ? 40 : 100) || (!allowEmpty && !value.length) || value.some(v => typeof v !== 'string' || (action ? !/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(v) : !identity.test(v))) || new Set(value).size !== value.length) throw new Error('Lista explícita de IDs no vacíos y únicos requerida; consulta policy para IDs permitidos');
-  return [...value];
+  return [...value].sort();
 }
 export function scopedCreatePayload(value: Record<string, unknown>) {
   fields(value, ['name','livemode','billing_account_id','team_ids','action_ids','expires_at','manager_user_ids']);
