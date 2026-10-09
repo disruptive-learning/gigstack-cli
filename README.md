@@ -1058,3 +1058,10 @@ The initial setup adapters are `airtable`, `mercadolibre`, `netsuite`, and `zett
 Read the returned `effect_scope` and `credential_livemode`: Airtable/MercadoLibre credentials are shared by the team, NetSuite selects a credential environment, and Zettle's mode selects imports for its connection. Current user permissions and entitlements are checked by the server. An existing session lock must be inspected before starting another. Cancellation applies to pending/expired sessions and does not disconnect an established provider.
 
 Unknown or failed sessions preserve their full state and exit 1. Reconcile reads evidence without replaying the provider call. Explicit recovery and credential resubmission happen in the browser; there are no CLI submit/resolve commands.
+
+`invoices eom-run --yes` starts the existing live end-of-month global-invoicing workflow.
+The backend accepts it only in production, on the month's final day before 23:00 in
+America/Mexico_City; staging, emulators and test credentials are refused. An accepted
+response does not confirm stamping or validation. There is no idempotency key for this
+legacy action: read the resulting records before deciding whether an interrupted run
+needs another request, and never retry automatically.

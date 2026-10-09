@@ -18,6 +18,13 @@ function uid(item: any): string {
 export function registerInvoiceCommands(program: Command) {
   const invoices = program.command("invoices").description("Gestionar facturas CFDI");
   registerSupportDocumentCommands(invoices, "invoices");
+  invoices.command("eom-run").description("Start production global invoicing on month-end before 23:00 Mexico City; accepted is not completed")
+    .option("-y, --yes", "Confirm live global invoicing for the selected team")
+    .action(async opts => {
+      await requireConfirmation(opts.yes, "Start LIVE end-of-month global invoicing for this team? Do not retry an interrupted request automatically.");
+      printJson(await api("POST", "/invoices/eom/run", { body: {} }));
+    });
+
   const printBatch = (response: any) => {
     printJson(response);
     if (["partially_completed", "failed"].includes(response.data?.result) || response.data?.rejected?.length > 0 || response.data?.counts?.failed > 0 || response.data?.counts?.needs_review > 0) process.exitCode = 1;

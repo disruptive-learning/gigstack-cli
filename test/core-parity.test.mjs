@@ -53,3 +53,9 @@ test('invoice batch preserves stable header/body keys, paged outcomes and XML pa
  const read=await f.run(['invoices','errors','--q','receiver tax','--page','2','--type','receiver']);assert.equal(read.code,0);assert.equal(new URL(f.requests.at(-1).url,f.base).searchParams.get('q'),'receiver tax');
  const count=f.requests.length;const invalid=await f.run(['invoices','batch','create','--data','{}','--idempotency-key','bad key','--yes']);assert.equal(invalid.code,1);assert.equal(f.requests.length,count);
 });
+
+test('EOM requires consent and does not retry backend errors', async t => {
+ const f=await fixture(t,()=>({status:403,body:{success:false,error:{code:'operation_not_allowed',message:'Production runtime required'}}}));
+ assert.equal((await f.run(['invoices','eom-run'])).code,1);assert.equal(f.requests.length,0);
+ const result=await f.run(['invoices','eom-run','--yes']);assert.equal(result.code,1);assert.equal(JSON.parse(result.stdout).error.code,'operation_not_allowed');assert.equal(f.requests.length,1);assert.equal(f.requests[0].method,'POST');assert.equal(new URL(f.requests[0].url,f.base).pathname,'/v2/invoices/eom/run');assert.deepEqual(JSON.parse(f.requests[0].body),{});
+});
