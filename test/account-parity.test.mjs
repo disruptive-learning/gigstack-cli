@@ -13,6 +13,11 @@ async function fixture(t, responder = () => ({ data: { id: 'team_b', settings: {
     let body = ''; for await (const part of req) body += part;
     requests.push({ method: req.method, url: req.url, headers: req.headers, body });
     const result = responder(requests.at(-1));
+    if (result.timeoutAfterHeaders) {
+      res.writeHead(200, { 'content-type': 'application/json', 'x-gigstack-test-timeout': 'after-headers' });
+      res.flushHeaders();
+      return; // The subprocess timeout abort closes this deliberately stalled response.
+    }
     if (result.delay) await new Promise(r => setTimeout(r, result.delay));
     res.writeHead(result.status ?? 200, result.headers ?? { 'content-type': 'application/json' });
     res.end(result.raw ?? JSON.stringify(result));
@@ -23,7 +28,7 @@ async function fixture(t, responder = () => ({ data: { id: 'team_b', settings: {
   function run(args, opts = {}) {
     return new Promise((resolve, reject) => {
       const env = { ...process.env, GIGSTACK_API_KEY: 'synthetic-test-token', GIGSTACK_API_BASE_URL: base, GIGSTACK_TEAM: '', ...opts.env };
-      const child = spawn(process.execPath, [cli, ...args], { env, stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn(process.execPath, [...(opts.timeoutAfterHeaders ? ['--import', new URL('./fixtures/timeout-after-headers.mjs', import.meta.url).href] : []), cli, ...args], { env, stdio: ['pipe', 'pipe', 'pipe'] });
       let stdout = '', stderr = '';
       child.stdout.on('data', d => stdout += d); child.stderr.on('data', d => stderr += d);
       child.on('error', reject); child.on('close', code => resolve({ code, stdout, stderr }));
@@ -523,10 +528,12 @@ test('identical billing journal reads operation before retry; mismatched scope/b
 
 test('billing transport uncertainty keeps journal and operation reference, never generates a new ID',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'gigstack-billing-timeout-'));t.after(()=>rm(dir,{recursive:true,force:true}));const journal=join(dir,'operation.json');
-  const f=await fixture(t,req=>req.url.endsWith('/summary')?{data:billingScope}:{delay:150,data:billingOperation});
+  const f=await fixture(t,req=>req.url.endsWith('/summary')?{data:billingScope}:{timeoutAfterHeaders:true});
   const args=['billing','portal','team_b','--operation-id',billingUuid,'--operation-file',journal,'--data','{"intent":"manage"}','--yes','--json'];
-  const r=await f.run(args,{env:{GIGSTACK_API_TIMEOUT_MS:'40'}});assert.equal(r.code,1);assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(json(r).error.outcome,'unknown');
+  const r=await f.run(args,{timeoutAfterHeaders:true});assert.equal(r.code,1);assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(json(r).error.outcome,'unknown');
   assert.equal(JSON.parse(await readFile(journal,'utf8')).operation_id,billingUuid);assert.equal(f.requests.filter(r=>r.method==='POST').length,1);
+  assert.equal(json(r).error.code,'request_timeout');assert.deepEqual(f.requests.map(r=>r.method),['GET','POST']);
+  assert.equal(f.requests[1].url,'/v2/teams/team_b/billing/portal');assert.equal(JSON.parse(f.requests[1].body).operation_id,billingUuid);
 });
 
 test('billing invalid inputs, missing confirmation and browser-only resolve make no network request or journal',async t=>{

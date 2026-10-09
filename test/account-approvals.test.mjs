@@ -13,6 +13,11 @@ async function fixture(t, responder = () => ({ data: { id: 'team_b', settings: {
     let body = ''; for await (const part of req) body += part;
     requests.push({ method: req.method, url: req.url, headers: req.headers, body });
     const result = responder(requests.at(-1));
+    if (result.timeoutAfterHeaders) {
+      res.writeHead(200, { 'content-type': 'application/json', 'x-gigstack-test-timeout': 'after-headers' });
+      res.flushHeaders();
+      return; // The subprocess timeout abort closes this deliberately stalled response.
+    }
     if (result.delay) await new Promise(r => setTimeout(r, result.delay));
     res.writeHead(result.status ?? 200, result.headers ?? { 'content-type': 'application/json' });
     res.end(result.raw ?? JSON.stringify(result));
@@ -23,7 +28,7 @@ async function fixture(t, responder = () => ({ data: { id: 'team_b', settings: {
   function run(args, opts = {}) {
     return new Promise((resolve, reject) => {
       const env = { ...process.env, GIGSTACK_API_KEY: 'synthetic-test-token', GIGSTACK_API_BASE_URL: base, GIGSTACK_TEAM: '', ...opts.env };
-      const child = spawn(process.execPath, [cli, ...args], { env, stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn(process.execPath, [...(opts.timeoutAfterHeaders ? ['--import', new URL('./fixtures/timeout-after-headers.mjs', import.meta.url).href] : []), cli, ...args], { env, stdio: ['pipe', 'pipe', 'pipe'] });
       let stdout = '', stderr = '';
       child.stdout.on('data', d => stdout += d); child.stderr.on('data', d => stderr += d);
       child.on('error', reject); child.on('close', code => resolve({ code, stdout, stderr }));
@@ -87,7 +92,9 @@ test('unconfirmed HTTP or malformed responses do not leak error secrets or retry
  }
 });
 test('timeout retains operation ID and sends only one request',async t=>{
- const f=await fixture(t,()=>({delay:150,data:approval}));
- const r=await f.run(['api-keys','create','--team','team_b','--operation-id',operation,'--json'],{env:{GIGSTACK_API_TIMEOUT_MS:'30'}});
+ const f=await fixture(t,()=>({timeoutAfterHeaders:true}));
+ const r=await f.run(['api-keys','create','--team','team_b','--operation-id',operation,'--json'],{timeoutAfterHeaders:true});
  assert.equal(r.code,1);assert.equal(f.requests.length,1);assert.match(r.stdout,RegExp(operation));
+ assert.equal(f.requests[0].method,'POST');assert.equal(new URL(f.requests[0].url,f.base).pathname,'/v2/users/me/account-approvals');assert.equal(JSON.parse(f.requests[0].body).operation_id,operation);
+ assert.equal(json(r).error.code,'approval_not_confirmed');
 });
