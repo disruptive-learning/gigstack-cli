@@ -684,7 +684,7 @@ gigstack users reset-password user_456 --team team_123 --json
 gigstack users issue-session user_456 --team team_123 --operation-id SAVED_UUID --json
 gigstack users delete user_456 --team team_123 --yes --json
 gigstack webhooks get webhook_123 --team team_123 --json
-gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --team team_123 --json
+gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --operation-id SAVED_UUID --expected-revision GET_REVISION --team team_123 --yes --json
 ```
 
 `users delete` removes accessible team memberships and retains the login and user
@@ -1269,3 +1269,35 @@ endpoints, and receivers can cause real or duplicate effects even in test mode.
 Historical retry is not exact byte replay: v2 uses current state at delivery.
 Output contains only validated safe receipt metadata, never event bodies,
 receiver responses, secret headers or signing material.
+
+### Configuración guardada de webhooks
+
+`webhooks create|update` exige un UUIDv4 guardado antes de enviar; usa
+`--operation-id` o `operation_id` en JSON (sin duplicarlo). `update|delete` exige
+la revisión del GET actual con `--expected-revision`. `--yes` confirma el efecto
+compartido live/test y los futuros envíos externos. `webhooks schema create|update|delete`
+expone los campos admitidos; los 26 eventos incluyen `teams.*`, sujetos a autoridad
+master-team. Un endpoint inactivo admite `events: []`; guardar no envía una prueba.
+
+```bash
+gigstack webhooks create --url https://example.com/webhook --events '' --status inactive --version v2 --operation-id SAVED_UUID --team TEAM --yes --json
+gigstack webhooks configuration-operation SAVED_UUID --team TEAM --json
+gigstack webhooks configure WEBHOOK --intent headers --team TEAM --json
+gigstack webhooks configure WEBHOOK --intent signing --team TEAM --json
+```
+
+Después de perder una respuesta de create/update, consulta el mismo UUID.
+`processing` y `outcome_unknown` permiten sólo lectura; no reenvíes ni inventes otro UUID.
+`conflict` permite un GET nuevo y otra intención revisada. Un recibo histórico completado
+puede tener `data: null` si el endpoint fue eliminado después. Si se pierde un DELETE,
+consulta GET; un 404 sólo acredita ausencia actual. DELETE no destruye secretos guardados.
+
+Headers y firma se configuran exclusivamente en el navegador privado del endpoint:
+`configure` comprueba el acceso actual y devuelve el enlace sin abrirlo ni escribir.
+No acepta ni imprime valores secretos, referencias de Secret Manager o nuevas claves.
+La URL productiva usa `https://app.gigstack.pro`. Para API no productiva configura
+`GIGSTACK_APP_ORIGIN=https://staging.gigstack.pro`, o un origen loopback si el API también
+es local; no existe fallback productivo. La nueva firma usa `Webhook-*`; desactivarla
+no desactiva la firma separada `X-Gigstack-Signature` de endpoints legacy.
+La copia `src/schemas/webhook-configuration-request.schema.json` corresponde al descriptor
+runtime del backend; las pruebas son offline y no prueban despliegue.

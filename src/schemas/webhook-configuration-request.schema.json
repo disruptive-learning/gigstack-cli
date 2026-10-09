@@ -1,0 +1,244 @@
+{
+  "create": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "events"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "expected_revision": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 1000
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ]
+      },
+      "version": {
+        "type": "string",
+        "enum": [
+          "v1",
+          "v2"
+        ]
+      },
+      "type": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "gigstack_connect",
+          null
+        ]
+      },
+      "security": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "headers"
+        ],
+        "properties": {
+          "headers": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {}
+          }
+        }
+      },
+      "signing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "rotate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 4096,
+        "format": "uri"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "payment.created",
+            "payment.updated",
+            "payment.succeeded",
+            "payment.canceled",
+            "payment.deleted",
+            "payment.upcoming_due_date",
+            "invoice.created",
+            "invoice.canceled",
+            "invoice.failed",
+            "invoice_batch.completed",
+            "receipt.created",
+            "receipt.updated",
+            "receipt.completed",
+            "receipt.deleted",
+            "customer.created",
+            "customer.updated",
+            "customer.deleted",
+            "service.created",
+            "service.updated",
+            "service.deleted",
+            "sat.invoice.synced",
+            "teams.created",
+            "teams.sat.completed",
+            "teams.stripe.completed",
+            "teams.openpay.completed",
+            "teams.sat.manifest.signed"
+          ]
+        },
+        "maxItems": 26
+      }
+    }
+  },
+  "update": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "expected_revision": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 1000
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ]
+      },
+      "version": {
+        "type": "string",
+        "enum": [
+          "v1",
+          "v2"
+        ]
+      },
+      "type": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "gigstack_connect",
+          null
+        ]
+      },
+      "security": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "headers"
+        ],
+        "properties": {
+          "headers": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {}
+          }
+        }
+      },
+      "signing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "rotate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 4096,
+        "format": "uri"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "payment.created",
+            "payment.updated",
+            "payment.succeeded",
+            "payment.canceled",
+            "payment.deleted",
+            "payment.upcoming_due_date",
+            "invoice.created",
+            "invoice.canceled",
+            "invoice.failed",
+            "invoice_batch.completed",
+            "receipt.created",
+            "receipt.updated",
+            "receipt.completed",
+            "receipt.deleted",
+            "customer.created",
+            "customer.updated",
+            "customer.deleted",
+            "service.created",
+            "service.updated",
+            "service.deleted",
+            "sat.invoice.synced",
+            "teams.created",
+            "teams.sat.completed",
+            "teams.stripe.completed",
+            "teams.openpay.completed",
+            "teams.sat.manifest.signed"
+          ]
+        },
+        "maxItems": 26
+      }
+    }
+  },
+  "delete": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "expected_revision": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  }
+}

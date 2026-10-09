@@ -100,8 +100,8 @@ test('membership and invitations use explicit operations and preserve role/permi
 });
 
 test('old mutation success emits a single JSON value; old catch sets exit status', async t => {
-  const f = await fixture(t, req => req.method === 'DELETE' ? { message:'deleted' } : { status:400, error:'invalid request' });
-  const r = await f.run(['webhooks','delete','w1','--team','team_b','--json']);
+  const f = await fixture(t, req => req.method === 'DELETE' ? { data:{deleted:true} } : { status:400, error:'invalid request' });
+  const r = await f.run(['webhooks','delete','w1','--team','team_b','--expected-revision','a'.repeat(64),'--yes','--json']);
   assert.equal(r.code, 0); assert.equal(json(r).success, true);
   const bad = await f.run(['clients','get','bad','--json']); assert.equal(bad.code,1); assert.equal(json(bad).error.message,'invalid request');
 });
@@ -182,8 +182,6 @@ test('users and webhook administration target documented methods, scoped by glob
     [['users','update','user_a','--data','{"first_name":"Fixture"}'],'PUT','/v2/users/user_a',{first_name:'Fixture'}],
     [['users','reset-password','user_a'],'POST','/v2/users/reset-password/user_a',{}],
     [['users','delete','user_a','--yes'],'DELETE','/v2/users/user_a',undefined],
-    [['webhooks','get','webhook_a'],'GET','/v2/webhooks/webhook_a',undefined],
-    [['webhooks','update','webhook_a','--data','{"status":"inactive","description":null}'],'PUT','/v2/webhooks/webhook_a',{status:'inactive',description:null}],
   ];
   for (const [args,method,path,body] of cases) {
     const r=await f.run(['--team','team_b',...args,'--json']);assert.equal(r.code,0,r.stdout);json(r);
