@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { api } from "../api.js";
 import { withJsonInput, readJsonInput, requireConfirmation, segment } from "../input.js";
 import { printJson } from "../output.js";
-import { saveCredential } from "../secure-output.js";
+import { approvalTeam, prepareApproval } from "../account-approvals.js";
 
 export function registerSelfCommands(program: Command) {
   const me = program.command("me").description("Tu identidad Firebase/MCP: perfil, preferencias, avisos y tokens personales; API/OAuth no puede suplantar al creador");
@@ -28,17 +28,12 @@ export function registerSelfCommands(program: Command) {
     .action(async opts => { await requireConfirmation(opts.yes, "¿Marcar todos tus avisos como leídos?"); printJson(await api("POST", "/users/me/notifications/read-all", { body: {} })); });
   const tokens = me.command("mcp-tokens").description("Tus tokens MCP; términos requieren aceptación expresa del usuario");
   tokens.command("list").action(async () => printJson(await api("GET", "/users/me/mcp-tokens")));
-  withJsonInput(tokens.command("create").description("Emitir token personal: name, team_id, livemode; términos sólo con --accept-terms elegido expresamente por el usuario"))
-    .option("--accept-terms", "El usuario ha leído y acepta expresamente los términos MCP; nunca inferir consentimiento")
-    .requiredOption("--out <path>", "Archivo NUEVO privado (0600) para token y URL de una sola entrega")
-    .option("-y, --yes", "Confirmar creación (no sustituye --accept-terms)")
+  withJsonInput(tokens.command("create").description("Preparar aprobación en navegador: name, team_id, livemode. El usuario acepta términos y recibe el secreto sólo allí"))
+    .requiredOption("--operation-id <uuid>", "UUIDv4 persistido antes del primer intento; no cambiarlo al reintentar")
     .action(async opts => {
       const body = await readJsonInput(opts);
-      if (!opts.acceptTerms || body.terms_accepted === false) throw new Error("Se requiere --accept-terms con aceptación expresa del usuario; --yes no acepta términos");
-      body.terms_accepted = true;
-      await requireConfirmation(opts.yes, "¿Crear este token MCP personal con los términos aceptados expresamente?");
-      const saved = await saveCredential(opts.out, () => api("POST", "/users/me/mcp-tokens", { body }));
-      printJson({ success: true, data: { token: saved.result.data.token, credentials_file: saved.path } });
+      if (Object.keys(body).some(k => !["name", "team_id", "livemode"].includes(k)) || typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 64 || typeof body.livemode !== "boolean") throw new Error("Se requiere name (1-64 caracteres), livemode booleano y team_id; los términos se aceptan en el navegador");
+      await prepareApproval(opts.operationId, "mcp_tokens.create", approvalTeam(body.team_id), { name: body.name.trim(), livemode: body.livemode });
     });
   tokens.command("revoke <keyId>").description("Revocar uno de tus tokens MCP")
     .option("-y, --yes", "Confirmar revocación")

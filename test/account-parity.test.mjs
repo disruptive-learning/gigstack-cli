@@ -335,30 +335,6 @@ test('self commands preserve profile nulls, recipient IDs, preferences and curso
   }
 });
 
-test('API and MCP credential issuance saves secrets once to new private files without stdout disclosure', async t => {
-  const f = await fixture(t, req => req.url.includes('/users/me/mcp-tokens') ? { success:true, data: { token: { keyid:'mcp_fixture' }, apikey:'synthetic-mcp-secret', mcp_url:'https://fixture.test/mcp?token=synthetic-mcp-secret' } } : { success:true, data: { live:{ key:{keyid:'live_fixture'},apikey:'synthetic-live-secret' },test:{key:{keyid:'test_fixture'},apikey:'synthetic-test-secret'},revoked_count:2 } });
-  const dir = await mkdtemp(join(tmpdir(),'gigstack-secrets-')); t.after(() => rm(dir,{recursive:true,force:true}));
-  for (const action of ['create','rotate']) {
-    const target = join(dir,`${action}.json`);
-    const r = await f.run(['api-keys',action,'--out',target,'--yes','--json']);
-    assert.equal(r.code,0,r.stderr); assert.equal(json(r).data.credentials_file,target);
-    assert.doesNotMatch(r.stdout + r.stderr,/synthetic-(live|test)-secret/);
-    assert.equal((await stat(target)).mode & 0o777,0o600);
-    assert.equal(JSON.parse(await readFile(target,'utf8')).data.live.apikey,'synthetic-live-secret');
-    const count = f.requests.length;
-    const duplicate = await f.run(['api-keys',action,'--out',target,'--yes','--json']);
-    assert.equal(duplicate.code,1); assert.equal(f.requests.length,count);
-  }
-  const path = join(dir,'mcp.json');
-  const args = ['me','mcp-tokens','create','--data','{"name":"Fixture","team_id":"team_b","livemode":false}','--out',path,'--yes','--json'];
-  const before = f.requests.length;
-  const missingConsent = await f.run(args); assert.equal(missingConsent.code,1); assert.equal(f.requests.length,before);
-  const accepted = await f.run([...args,'--accept-terms']); assert.equal(accepted.code,0,accepted.stderr);
-  assert.equal(JSON.parse(f.requests.at(-1).body).terms_accepted,true);
-  assert.doesNotMatch(accepted.stdout + accepted.stderr,/synthetic-mcp-secret|mcp_url/);
-  assert.equal(JSON.parse(await readFile(path,'utf8')).data.apikey,'synthetic-mcp-secret');
-});
-
 test('credential revocation is explicit and webhook cursors are not lost', async t => {
   const f = await fixture(t, () => ({ success:true,data:[],has_more:true,next_cursor:'webhook_next' }));
   for (const args of [['api-keys','revoke','sk_test_fixture'],['api-keys','emergency-revoke'],['me','mcp-tokens','revoke','mcp_fixture']]) {

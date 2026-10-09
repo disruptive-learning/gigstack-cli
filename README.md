@@ -811,43 +811,45 @@ se leen de Firebase Auth y no se cambian con este comando. Preferencias admite
 Notificaciones y webhooks usan `--cursor` con el `next_cursor` recibido.
 
 Las claves API requieren un usuario que sea administrador actual del equipo o
-su cuenta de facturación. `create` emite un par live/test sólo si no hay claves
-API activas; `rotate` reemplaza las claves API y conserva tokens MCP personales.
-Ambos entregan secretos una sola vez: la CLI exige `--out`, reserva un archivo
-nuevo con permisos `0600` antes de llamar al servidor, y sólo imprime metadatos
-y la ubicación del archivo. Nunca sobrescribe un archivo existente.
+su cuenta de facturación. `create` y `rotate` ahora **preparan una aprobación**;
+no emiten credenciales. La persona abre `review_url`, inicia sesión de nuevo si se
+solicita y confirma la acción exacta en el navegador. Sólo ese navegador recibe
+los secretos. Los antiguos `--out`, `--yes` de emisión y `--accept-terms` ya no se
+aceptan: la CLI imprime únicamente estado, enlace de revisión y recibo de metadatos.
+
+Guarda un UUIDv4 antes de cada solicitud nueva. Tras una respuesta incierta,
+reutiliza ese mismo `--operation-id` y contenido exacto; no generes otro ID como
+reintento. No hay reintento automático. Un ID reutilizado con otros datos falla.
 
 ```bash
 gigstack api-keys list --team TEAM_ID --json
-gigstack api-keys create --team TEAM_ID --out ./api-keys.json --yes --json
-gigstack api-keys rotate --team TEAM_ID --out ./rotated-api-keys.json --yes --json
+gigstack api-keys create --team TEAM_ID --operation-id UUID_GUARDADO --json
+gigstack api-keys rotate --team TEAM_ID --operation-id OTRO_UUID_GUARDADO --json
+gigstack account-approvals get APPROVAL_ID --json
+gigstack account-approvals cancel APPROVAL_ID --yes --json
 gigstack api-keys revoke API_KEY_ID --team TEAM_ID --yes --json
 gigstack api-keys emergency-revoke --team TEAM_ID --yes --json
 ```
 
-`emergency-revoke` invalida todas las claves API **y los tokens MCP asociados a
-ese equipo**, incluida la credencial de la llamada si corresponde. No revoca
-OAuth. Si se interrumpe, un administrador puede retomar la revocación; usa una
-sesión Firebase si el token MCP quedó revocado. La creación respeta las
-condiciones del plan y no concede acceso de API adicional. En una carrera de
-creación/rotación, `409 keys_changed` requiere revisar el listado antes de
-repetir; no se reintenta automáticamente. El listado puede devolver una página
-vacía con `has_more:true` al excluir tokens MCP: continúa con `--cursor`.
+`pending` significa que falta revisión humana; `completed` confirma el resultado
+mediante un recibo sin secretos. Cancelar sólo afecta solicitudes pendientes y no
+revoca claves ya emitidas. El agente no puede revisar, aceptar términos, ejecutar
+ni recuperar secretos de una aprobación. Abre el enlace sólo en el origen de la
+aplicación configurado para tu entorno y verifica equipo, modo y consecuencias.
 
-Para crear un token MCP personal, el usuario debe leer y aceptar los términos.
-`--yes` sólo confirma la creación: no sustituye el consentimiento separado.
-Un agente no debe agregar `--accept-terms` sin la elección expresa del usuario.
+`emergency-revoke` invalida todas las claves API **y tokens MCP asociados al equipo**,
+incluida la credencial actual si corresponde; OAuth permanece activo. La rotación
+aprobada conserva tokens MCP. El listado puede devolver `data:[]` con `has_more:true`:
+continúa con `--cursor` hasta terminar.
+
+Para preparar un token MCP personal, indica nombre, equipo inicial y modo. El usuario
+acepta los términos en el navegador; el equipo inicial no limita su acceso personal.
 
 ```bash
 gigstack me mcp-tokens create \
   --data '{"name":"Mi integración","team_id":"TEAM_ID","livemode":false}' \
-  --accept-terms --yes --out ./mcp-token.json --json
+  --operation-id UUID_GUARDADO --json
 ```
-
-El archivo privado contiene el token y su URL MCP. No los pegues en registros ni
-los agregues al repositorio. Si falla la escritura después de emitirlos, la CLI
-sale con código `1` y `outcome:"issued"`; revisa las credenciales antes de
-revocarlas o crear otras.
 
 ### Carga fiscal privada en navegador
 
