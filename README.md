@@ -1065,3 +1065,16 @@ America/Mexico_City; staging, emulators and test credentials are refused. An acc
 response does not confirm stamping or validation. There is no idempotency key for this
 legacy action: read the resulting records before deciding whether an interrupted run
 needs another request, and never retry automatically.
+
+### API and webhook delivery logs
+
+```bash
+gigstack logs api list TEAM_ID --method POST --status 5xx --limit 50 --json
+gigstack logs api get TEAM_ID LOG_ID --json
+gigstack logs webhooks list TEAM_ID --event invoice.created --status failed --json
+gigstack logs webhooks get TEAM_ID LOG_ID --json
+```
+
+Lists return `has_more` and `next_cursor`. Follow the cursor with the same team, credential mode, limit and filters, even when the page has no matching rows. Optional `--from`/`--to` accept inclusive epoch milliseconds. `--endpoint` matches a redacted API route prefix; variable path segments appear as `:id`.
+
+These reads preserve log metadata and bounded body structure while withholding historical body values, headers, credentials and private URLs. They are not raw payload exports. Missing-mode webhook records are excluded; collection retention limits available history. Pending and unknown deliveries are not success. The delivery log ID is the web's log identifier, and `retry_requested` only reports a request flag. Reading a failed delivery does not resend it.
