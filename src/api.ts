@@ -22,6 +22,14 @@ export function getApiKey(override?: string): string {
   if (!profile) {
     throw new Error("No autenticado. Ejecuta: gigstack login");
   }
+  // An explicitly supplied environment key is invocation configuration. Saved
+  // credentials may only be sent to the origin selected when they were saved.
+  if (!process.env.GIGSTACK_API_KEY) {
+    const boundOrigin = new URL(profile.baseUrl ?? "https://api.gigstack.io/v2").origin;
+    if (new URL(apiBaseUrl()).origin !== boundOrigin) {
+      throw Object.assign(new Error("El origen del API no coincide con el perfil guardado. No se envió la credencial. Para staging/local, configura un perfil con gigstack login --profile <nombre> --base-url <url> e introduce su clave explícitamente."), { code: "credential_origin_mismatch" });
+    }
+  }
   return profile.apiKey;
 }
 
@@ -98,7 +106,7 @@ export async function resolveTeam(apiKey?: string): Promise<any> {
   const key = apiKey || getApiKey();
   const explicitTeam = runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
   if (explicitTeam) {
-    const res = await api("GET", `/teams/${encodeURIComponent(explicitTeam)}`, { apiKey: key, team: explicitTeam });
+    const res = await api("GET", `/teams/${encodeURIComponent(explicitTeam)}`, { apiKey, team: explicitTeam });
     return res.data ?? null;
   }
   const jwtTeamId = getTeamFromKey(key);
@@ -106,13 +114,13 @@ export async function resolveTeam(apiKey?: string): Promise<any> {
   // Try direct fetch if JWT has a team
   if (jwtTeamId) {
     try {
-      const res = await api("GET", `/teams/${encodeURIComponent(jwtTeamId)}`, { apiKey: key });
+      const res = await api("GET", `/teams/${encodeURIComponent(jwtTeamId)}`, { apiKey });
       if (res.data) return res.data;
     } catch (e) { if (!(e instanceof ApiError) || e.status !== 404) throw e; }
   }
 
   // Fallback to list
-  const res = await api("GET", "/teams", { apiKey: key });
+  const res = await api("GET", "/teams", { apiKey });
   const teams = res.data || [];
   if (jwtTeamId) {
     const match = teams.find((t: any) => t.id === jwtTeamId);

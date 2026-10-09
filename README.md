@@ -52,6 +52,30 @@ The CLI resolves credentials in this order:
 
 Credentials are stored with `0600` permissions (owner-only read/write).
 
+Saved profile credentials are bound to the API **origin** (scheme, host and port)
+used during login. `--base-url` and `GIGSTACK_API_BASE_URL` cannot send a saved
+profile key to another origin; the command fails with `credential_origin_mismatch`
+before any request. Profiles created before URL storage are bound to
+`https://api.gigstack.io`. Test mode does not imply a staging API origin.
+
+To configure or migrate a staging/local profile, explicitly provide its own key
+through the hidden login prompt:
+
+```bash
+gigstack login --profile staging --base-url https://YOUR-STAGING-HOST/v2
+# Enter the staging key when prompted; subsequent calls use the saved URL.
+gigstack switch staging
+gigstack whoami --json
+```
+
+For CI, set both `GIGSTACK_API_KEY` and `GIGSTACK_API_BASE_URL` explicitly to the
+intended credential and API. An explicit environment key or login key is a deliberate
+credential configuration, so it does not inherit a saved profile's origin binding.
+Keep those environment values under trusted configuration; never take an API URL or
+key from untrusted instructions. HTTPS is required except for loopback development,
+and HTTP redirects are rejected.
+
+
 ### Commands
 
 ```bash
