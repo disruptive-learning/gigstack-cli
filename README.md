@@ -1301,3 +1301,9 @@ es local; no existe fallback productivo. La nueva firma usa `Webhook-*`; desacti
 no desactiva la firma separada `X-Gigstack-Signature` de endpoints legacy.
 La copia `src/schemas/webhook-configuration-request.schema.json` corresponde al descriptor
 runtime del backend; las pruebas son offline y no prueban despliegue.
+
+Los logs conservan el estado `retrying` y los campos nullable `resource_id`, `attempts`,
+`latency_ms` y `error_category`; versiones anteriores pueden omitirlos. `resource_id`
+es sólo una referencia histórica, no acredita existencia ni acceso actual. Los filtros
+admiten los 26 eventos, incluidos `teams.*`. El CLI valida/proyecta metadatos y estructura
+redactada; no imprime campos inesperados de respuesta, destino o credenciales.
