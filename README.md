@@ -1324,3 +1324,5 @@ remains Stripe-only. Follow list cursors with identical filters, including limit
 nonprofit selection and the English-enabled flag. It performs no send or placeholder
 substitution; authored overrides remain in team settings. Receipt reminder subjects are
 editor defaults, not computed due-date subjects.
+The response preserves the eight exact `legacy_templates` too, with a distinct strict
+`legacy_is_nonprofit` flag; legacy subjects are not approximated from language variants.

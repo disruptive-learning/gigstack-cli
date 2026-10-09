@@ -16,6 +16,7 @@ export function safeEmailTemplates(value: any, team: string) {
     value.effect_scope !== "team_shared" ||
     value.source !== "editor_baseline" ||
     typeof value.is_nonprofit !== "boolean" ||
+    typeof value.legacy_is_nonprofit !== "boolean" ||
     typeof value.english_enabled !== "boolean"
   )
     throw new Error("Plantillas con alcance inválido");
@@ -32,7 +33,26 @@ export function safeEmailTemplates(value: any, team: string) {
       ),
     ]),
   );
+  const legacy_templates = Object.fromEntries(
+    [
+      "invoiceMessage",
+      "invoiceMessageComplements",
+      "invoiceMessageEgress",
+      "paymentsEmailsTemplate",
+      "paymentsReminderTemplate",
+      "paymentsReminderAfterTemplate",
+      "receiptsEmailsTemplate",
+      "receiptsRemindersTemplate",
+    ].map((k) => {
+      const t = value.legacy_templates?.[k];
+      if (!t || typeof t.subject !== "string" || typeof t.body !== "string")
+        throw new Error("Plantilla heredada incompleta");
+      return [k, { body: t.body, subject: t.subject }];
+    }),
+  );
   return {
+    legacy_is_nonprofit: value.legacy_is_nonprofit,
+    legacy_templates,
     team_id: team,
     effect_scope: "team_shared",
     source: "editor_baseline",

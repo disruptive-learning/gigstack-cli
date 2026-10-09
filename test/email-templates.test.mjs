@@ -87,6 +87,22 @@ test("named team baseline read preserves both languages without sending or expan
     effect_scope: "team_shared",
     source: "editor_baseline",
     is_nonprofit: true,
+    legacy_is_nonprofit: false,
+    legacy_templates: Object.fromEntries(
+      [
+        "invoiceMessage",
+        "invoiceMessageComplements",
+        "invoiceMessageEgress",
+        "paymentsEmailsTemplate",
+        "paymentsReminderTemplate",
+        "paymentsReminderAfterTemplate",
+        "receiptsEmailsTemplate",
+        "receiptsRemindersTemplate",
+      ].map((k) => [
+        k,
+        { subject: "Distinct legacy subject", body: "Legacy complete body" },
+      ]),
+    ),
     english_enabled: false,
     templates_by_language: { es: language, en: language },
   };
@@ -95,6 +111,8 @@ test("named team baseline read preserves both languages without sending or expan
   assert.equal(r.code, 0, r.stdout);
   assert.match(r.stdout, /Texto íntegro/);
   assert.doesNotMatch(r.stdout, /PRIVATE/);
+  assert.match(r.stdout, /Distinct legacy subject/);
+  assert.equal(JSON.parse(r.stdout).data.legacy_is_nonprofit, false);
   assert.equal(f.requests[0].method, "GET");
   assert.equal(f.requests[0].url, "/v2/teams/t/email-templates?team=t");
   data.team_id = "foreign";
