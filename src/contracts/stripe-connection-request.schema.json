@@ -1,0 +1,166 @@
+{
+  "create": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "method",
+      "expected_generation",
+      "livemode"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "format": "uuid"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "oauth",
+          "manual_key",
+          "connect_webhooks",
+          "account_onboarding"
+        ]
+      },
+      "expected_generation": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "livemode": {
+        "type": "boolean"
+      }
+    }
+  },
+  "disconnect": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_generation",
+      "livemode"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "format": "uuid"
+      },
+      "expected_generation": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "livemode": {
+        "type": "boolean"
+      }
+    }
+  },
+  "terminal": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "livemode"
+    ],
+    "properties": {
+      "livemode": {
+        "type": "boolean"
+      }
+    }
+  },
+  "exchange": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "state",
+      "code",
+      "livemode"
+    ],
+    "properties": {
+      "state": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "code": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "livemode": {
+        "type": "boolean"
+      }
+    }
+  },
+  "submit": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "livemode",
+      "credentials"
+    ],
+    "properties": {
+      "livemode": {
+        "type": "boolean"
+      },
+      "resume_confirmed": {
+        "type": "boolean"
+      },
+      "credentials": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "secret_key",
+          "account_id"
+        ],
+        "properties": {
+          "secret_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16000
+          },
+          "public_key": {
+            "type": "string",
+            "maxLength": 16000
+          },
+          "account_id": {
+            "type": "string",
+            "maxLength": 160,
+            "pattern": "^acct_[A-Za-z0-9]+$"
+          }
+        }
+      }
+    }
+  },
+  "close": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "closure_operation_id",
+      "livemode",
+      "expected_generation",
+      "acknowledge_provider_effects_remain"
+    ],
+    "properties": {
+      "closure_operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "format": "uuid"
+      },
+      "livemode": {
+        "type": "boolean"
+      },
+      "expected_generation": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "acknowledge_provider_effects_remain": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      }
+    }
+  }
+}

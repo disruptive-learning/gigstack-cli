@@ -1378,3 +1378,19 @@ The coordinated reset source cutover now makes legacy `users reset-password`
 refuse locally with `reset_delivery_operation_required`, before any HTTP/email
 effect. Use the six `password-reset` actions above. Release with the paired
 backend/browser changes; offline tests do not establish live availability.
+### Stripe connection workflow
+
+```bash
+gigstack stripe-connection status <teamId> --expected-mode test --json
+gigstack stripe-connection prepare <teamId> --data '{"operation_id":"<saved-UUIDv4>","method":"oauth","expected_generation":0}' --expected-mode test --json
+gigstack stripe-connection operation <teamId> <saved-UUIDv4> --expected-mode test --json
+```
+
+Preparation returns safe IDs and a private browser handoff. An independently
+reauthenticated editor reviews OAuth, manual keys, Connect webhooks or account
+onboarding in that browser; the CLI never accepts keys or OAuth codes. Save the UUID
+before transport and use readback after a lost response. `cancel` releases untouched
+preparations. `disconnect --yes --data <finite-operation-JSON>` removes shared local
+credentials from both live/test modes; it does not revoke Stripe authorization or
+remove remote webhooks. Unknown effects require explicit private local closure, not
+automatic replay. Platform activation, pricing/import and payment replay are separate.

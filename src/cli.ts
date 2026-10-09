@@ -1,4 +1,5 @@
 import { registerResetDeliveryCommands } from "./commands/reset-delivery.js";
+import { registerStripeConnectionCommands } from "./commands/stripe-connection.js";
 import { registerPortalAccessCommands } from "./commands/portal-access.js";
 import { registerPaymentReminderCommands } from "./commands/payment-reminders.js";
 import { registerVendorCommands } from "./commands/vendors.js";
@@ -47,7 +48,10 @@ program
   .version(__PKG_VERSION__)
   .option("--json", "Salida en formato JSON")
   .option("--team <id>", "Team ID para operaciones multi-equipo")
-  .option("--base-url <url>", "URL base del API, incluyendo /v2 (o GIGSTACK_API_BASE_URL)")
+  .option(
+    "--base-url <url>",
+    "URL base del API, incluyendo /v2 (o GIGSTACK_API_BASE_URL)",
+  )
   .exitOverride()
   .configureOutput({ writeErr: () => {} })
   .hook("preAction", (_thisCommand, actionCommand) => {
@@ -67,6 +71,7 @@ registerInvoiceCommands(program);
 registerPaymentCommands(program);
 registerPaymentLinkCommands(program);
 registerVendorCommands(program);
+registerStripeConnectionCommands(program);
 registerPaymentReminderCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
@@ -90,7 +95,9 @@ registerExportCommand(program);
 registerExplainCommand(program);
 registerForecastCommand(program);
 
-program.addHelpText("after", `
+program.addHelpText(
+  "after",
+  `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
   ${pc.dim("$")} gigstack context payments               Entender pagos (para agentes)
@@ -113,7 +120,8 @@ ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack explain <id>                    Explicar cualquier recurso
 
 ${pc.bold("Docs:")} https://docs.gigstack.io
-`);
+`,
+);
 
 try {
   await program.parseAsync();
