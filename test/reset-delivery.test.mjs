@@ -14,6 +14,10 @@ async function fixture(t){
  t.after(()=>{server.closeAllConnections();return new Promise(r=>server.close(r));});
  return {requests,setReply(value){response=value;},run(args){return new Promise((resolve,reject)=>{const child=spawn(process.execPath,[cli,...args,'--json'],{env:{...process.env,GIGSTACK_API_KEY:token,GIGSTACK_API_BASE_URL:`http://127.0.0.1:${server.address().port}/v2`,GIGSTACK_TEAM:'team_test'}});let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);child.on('error',reject);child.on('close',code=>resolve({code,stdout,stderr}));});}};
 }
+test('retired direct users reset requests no email or HTTP effect',async t=>{
+ const f=await fixture(t);const result=await f.run(['users','reset-password','target']);
+ assert.equal(result.code,1);assert.match(result.stdout+result.stderr,/reset_delivery_operation_required/);assert.equal(f.requests.length,0);
+});
 test('all reset commands preserve exact UUID/team/user/mode/body and safe recovery',async t=>{
  const f=await fixture(t);
  for(const action of ['prepare','get','execute','cancel','prepare-recovery','get-recovery']){

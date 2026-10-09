@@ -26,8 +26,8 @@ export function registerUserCommands(program: Command) {
     });
   withJsonInput(users.command("update <id>").description("Actualizar perfil de un usuario como admin; no cambia email ni membresías reservadas"))
     .action(async (id, opts) => show(await api("PUT", `/users/${segment(id)}`, { body: await readJsonInput(opts) })));
-  users.command("reset-password <id>").description("Enviar correo de restablecimiento al usuario; requiere admin")
-    .action(async id => show(await api("POST", `/users/reset-password/${segment(id)}`, { body: {} })));
+  users.command("reset-password <id>").description("Retirado: usa password-reset prepare/get/execute con UUID guardado")
+    .action(() => { throw new Error("reset_delivery_operation_required: use password-reset prepare, then explicitly execute the saved UUID; no email was requested"); });
   users.command("issue-session <id>").alias("login-link")
     .description("Prepare owner-reviewed managed session access; no bearer or login link is returned to CLI")
     .requiredOption("--operation-id <uuid>", "Persisted UUIDv4 for this exact session intent")

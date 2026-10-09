@@ -184,7 +184,6 @@ test('users and webhook administration target documented methods, scoped by glob
     [['users','get','user_a'],'GET','/v2/users/user_a',undefined],
     [['users','create','--data','{"email":"person@example.invalid","auto_join":false,"role":"viewer"}'],'POST','/v2/users',{email:'person@example.invalid',auto_join:false,role:'viewer'}],
     [['users','update','user_a','--data','{"first_name":"Fixture"}'],'PUT','/v2/users/user_a',{first_name:'Fixture'}],
-    [['users','reset-password','user_a'],'POST','/v2/users/reset-password/user_a',{}],
     [['users','delete','user_a','--yes'],'DELETE','/v2/users/user_a',undefined],
   ];
   for (const [args,method,path,body] of cases) {

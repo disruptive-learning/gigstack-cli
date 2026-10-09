@@ -1373,3 +1373,8 @@ global login even in test mode; an earlier code may remain valid and recovery
 may send another email. These are offline-verified adapters; route mounting and
 legacy `users reset-password` retirement require the coordinated backend/browser
 cutover.
+
+The coordinated reset source cutover now makes legacy `users reset-password`
+refuse locally with `reset_delivery_operation_required`, before any HTTP/email
+effect. Use the six `password-reset` actions above. Release with the paired
+backend/browser changes; offline tests do not establish live availability.
