@@ -1,3 +1,4 @@
+import { registerScopedApiKeyCommands } from "./commands/scoped-api-keys.js";
 import { registerResetDeliveryCommands } from "./commands/reset-delivery.js";
 import { registerStripeConnectionCommands } from "./commands/stripe-connection.js";
 import { registerPortalAccessCommands } from "./commands/portal-access.js";
@@ -81,6 +82,7 @@ registerResetDeliveryCommands(program);
 registerUserCommands(program);
 registerAutomationCommands(program);
 registerCredentialCommands(program);
+registerScopedApiKeyCommands(program);
 registerIntegrationCommands(program);
 registerBillingCommands(program);
 registerBrandingCommands(program);

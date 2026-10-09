@@ -1407,3 +1407,42 @@ creation does not prove onboarding or enabled charges. Prepare a separate
 Refresh retrieves the exact selected-mode provider account and reports activation flags;
 returning from onboarding is not proof of completion. After an unknown creation response,
 read the saved operation UUID without automatically replaying provider creation.
+
+### Named scoped API keys
+
+Use a personal Firebase/MCP credential for key management. API keys (including legacy
+keys) cannot manage keys. Existing legacy credentials continue working under their
+existing checks; no migration or rotation is forced.
+
+```bash
+gigstack scoped-api-keys policy --billing-account BILLING_ACCOUNT_ID --json
+gigstack scoped-api-keys list --billing-account BILLING_ACCOUNT_ID --json
+gigstack scoped-api-keys prepare-create --operation-id SAVED_UUIDV4 --file scoped-key-request.json --json
+gigstack account-approvals get APPROVAL_ID --json
+gigstack scoped-api-keys get KEY_ID --billing-account BILLING_ACCOUNT_ID --json
+gigstack scoped-api-keys audit KEY_ID --billing-account BILLING_ACCOUNT_ID --json
+gigstack scoped-api-keys prepare-rotate --billing-account BILLING_ACCOUNT_ID --operation-id ANOTHER_SAVED_UUIDV4 --data '{"key_id":"KEY_ID","overlap_seconds":3600}' --json
+gigstack scoped-api-keys revoke KEY_ID --billing-account BILLING_ACCOUNT_ID --operation-id REVOKE_SAVED_UUIDV4 --yes --json
+```
+
+The create file contains exactly `name`, `livemode` (boolean), `billing_account_id`,
+`team_ids`, `action_ids`, `expires_at` (epoch milliseconds), and `manager_user_ids`
+(an empty array delegates no extra managers). Copy exact allowed action IDs from
+`policy`; do not use wildcards. Expiry is required, at most 365 days and subject to
+any shorter server policy. List/audit support `--limit` and `--cursor`; keep reading
+while `next_cursor` is non-null, including empty pages.
+
+Preparation returns `review_url` and safe scope. The initiating person must review
+and execute in the private browser after recent sign-in. Only that first private
+response reveals the secret; CLI readback and retries cannot recover it. Rotation
+copies the key's scope/managers, reviews explicit overlap, and leaves other keys
+untouched. Preserve the UUID and inspect state after a timeout; never automatically
+rotate again. Migrate and verify one integration at a time before deliberately
+revoking its old credential.
+
+The initial scoped catalog covers reviewed business reads and client/service CRUD.
+Fiscal writes, refunds, automation, team/user administration and credential lifecycle
+are unavailable to scoped keys. Unknown/unreviewed routes return
+`scoped_action_unavailable`. Scoped client updates require
+`check_pending_receipts:false`; `POST /clients` with `search.update:true` requires
+both `createClients` and `updateClientsById`.
