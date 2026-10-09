@@ -1319,3 +1319,8 @@ team/mode. No automatic write retries or new IDs. Historical completion may retu
 Use `short_url ?? url`; staging has a full URL and no inferred working shortener.
 Saving methods/automations does not charge or stamp; current public payer execution
 remains Stripe-only. Follow list cursors with identical filters, including limit.
+
+`teams email-templates <id>` returns complete es/en editor baseline bodies and subjects,
+nonprofit selection and the English-enabled flag. It performs no send or placeholder
+substitution; authored overrides remain in team settings. Receipt reminder subjects are
+editor defaults, not computed due-date subjects.

@@ -1,3 +1,4 @@
+import { safeEmailTemplates } from "../email-templates.js";
 import { invitationPayload } from "../invitation-contract.js";
 import { approvalTeam, membershipTarget, prepareApproval } from "../account-approvals.js";
 import { registerFiscalSessionCommands } from "./fiscal-sessions.js";
@@ -26,6 +27,8 @@ async function call(method: string, path: string, body?: Record<string, any>) {
 export function registerTeamCommands(program: Command) {
   const teams = program.command("teams").description("Gestionar equipos, configuración y accesos");
   registerFiscalSessionCommands(teams);
+  teams.command("email-templates <id>").description("Leer texto íntegro de plantillas base del editor es/en; no envía ni sustituye valores ni devuelve personalizaciones guardadas")
+    .action(async id => { const result=await api("GET", `${target(id)}/email-templates`, {team:id}); printJson({data:safeEmailTemplates(result.data,id)}); });
   teams.command("list").description("Listar equipos accesibles")
     .option("--limit <n>", "Tamaño de página", "20").option("--next <cursor>", "Cursor")
     .action(async opts => call("GET", `/teams?limit=${encodeURIComponent(opts.limit)}${opts.next ? `&next=${encodeURIComponent(opts.next)}` : ""}`));
