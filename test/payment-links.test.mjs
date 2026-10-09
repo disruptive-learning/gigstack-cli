@@ -86,7 +86,14 @@ const link = {
   revision,
   effect_scope: "team_mode_payment_link",
 };
-link.items[0].amounts = { taxes: link.items[0].taxes, subtotal:100, total:100, includedTaxes:0, excludedTaxes:16, withholdedTaxes:0 };
+link.items[0].amounts = {
+  taxes: link.items[0].taxes,
+  subtotal: 100,
+  total: 100,
+  includedTaxes: 0,
+  excludedTaxes: 16,
+  withholdedTaxes: 0,
+};
 const operation = {
   operation_id: id,
   team_id: "t",
@@ -256,4 +263,30 @@ test("actual lost transport sends one POST and directs readback instead of retry
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].method, "POST");
   assert.match(r.stdout, /unknown|incierto|desconocido|outcome/i);
+});
+
+test("saved counters and references retain unknown states and discard unrelated private fields", async (t) => {
+  const historical_references = {
+    invoices: ["invoice_a", "invoice_a"],
+    receipts: null,
+    unresolved_count: 1,
+    authorization: "resolve_each_resource",
+  };
+  const f = await fixture(t, () => ({
+    data: {
+      ...link,
+      views: 0,
+      historical_references: {
+        ...historical_references,
+        secret: "never return",
+      },
+    },
+  }));
+  const result = await f.run(["payment-links", "get", link.id]);
+  assert.equal(result.code, 0, result.stderr);
+  const body = JSON.parse(result.stdout);
+  assert.equal(body.data.views, 0);
+  assert.deepEqual(body.data.historical_references, historical_references);
+  assert.equal(result.stdout.includes("never return"), false);
+  assert.equal(f.requests.length, 1);
 });

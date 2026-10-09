@@ -107,7 +107,32 @@ export function safeLink(raw: any, team: string, mode: boolean, id?: string) {
       !valid(raw[k], (schemas.create.properties as any)[k])
     )
       throw new Error("Configuración de enlace inválida");
-  return Object.fromEntries(
+  const historical = raw.historical_references;
+  if (
+    raw.views !== undefined &&
+    raw.views !== null &&
+    (!Number.isSafeInteger(raw.views) || raw.views < 0)
+  )
+    throw new Error("Contador histórico de enlace inválido");
+  const references = (v: unknown) =>
+    v === null ||
+    (Array.isArray(v) &&
+      v.every(
+        (id) => typeof id === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(id),
+      ));
+  if (
+    historical !== undefined &&
+    (!object(historical) ||
+      !references(historical.invoices) ||
+      !references(historical.receipts) ||
+      !Number.isSafeInteger(historical.unresolved_count) ||
+      historical.unresolved_count < 0 ||
+      historical.authorization !== "resolve_each_resource")
+  )
+    throw new Error(
+      "Referencias históricas inválidas; consulta cada recurso con su autorización actual",
+    );
+  const projected = Object.fromEntries(
     [
       ...configFields,
       "id",
@@ -128,6 +153,15 @@ export function safeLink(raw: any, team: string, mode: boolean, id?: string) {
       .filter((k) => Object.hasOwn(raw, k))
       .map((k) => [k, raw[k]]),
   );
+  if (raw.views !== undefined) projected.views = raw.views;
+  if (historical !== undefined)
+    projected.historical_references = {
+      invoices: historical.invoices,
+      receipts: historical.receipts,
+      unresolved_count: historical.unresolved_count,
+      authorization: "resolve_each_resource",
+    };
+  return projected;
 }
 export function linkReceipt(
   raw: any,
