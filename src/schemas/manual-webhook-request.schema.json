@@ -1,0 +1,195 @@
+{
+  "test": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirmed",
+      "endpoint_id",
+      "event",
+      "resource_id"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean",
+        "description": "Assertion of the currently authenticated mode; never selects or overrides it. For get, identifies the frozen operation mode."
+      },
+      "confirmed": {
+        "const": true
+      },
+      "endpoint_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "event": {
+        "type": "string",
+        "enum": [
+          "payment.created",
+          "payment.updated",
+          "payment.succeeded",
+          "payment.canceled",
+          "payment.deleted",
+          "payment.upcoming_due_date",
+          "invoice.created",
+          "invoice.canceled",
+          "invoice.failed",
+          "receipt.created",
+          "receipt.updated",
+          "receipt.completed",
+          "receipt.deleted",
+          "customer.created",
+          "customer.updated",
+          "customer.deleted",
+          "service.created",
+          "service.updated",
+          "service.deleted",
+          "teams.created",
+          "teams.sat.completed",
+          "teams.stripe.completed",
+          "teams.openpay.completed",
+          "teams.sat.manifest.signed"
+        ]
+      },
+      "resource_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "source_team_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      }
+    }
+  },
+  "resend_current": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirmed",
+      "endpoint_id",
+      "event",
+      "resource_id",
+      "acknowledge_duplicate_delivery"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean",
+        "description": "Assertion of the currently authenticated mode; never selects or overrides it. For get, identifies the frozen operation mode."
+      },
+      "confirmed": {
+        "const": true
+      },
+      "endpoint_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "event": {
+        "type": "string",
+        "enum": [
+          "payment.created",
+          "payment.updated",
+          "payment.succeeded",
+          "payment.canceled",
+          "payment.deleted",
+          "payment.upcoming_due_date",
+          "invoice.created",
+          "invoice.canceled",
+          "invoice.failed",
+          "receipt.created",
+          "receipt.updated",
+          "receipt.completed",
+          "receipt.deleted",
+          "customer.created",
+          "customer.updated",
+          "customer.deleted",
+          "service.created",
+          "service.updated",
+          "service.deleted",
+          "teams.created",
+          "teams.sat.completed",
+          "teams.stripe.completed",
+          "teams.openpay.completed",
+          "teams.sat.manifest.signed"
+        ]
+      },
+      "resource_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "source_team_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "log_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "acknowledge_duplicate_delivery": {
+        "const": true
+      }
+    }
+  },
+  "retry": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirmed",
+      "log_id",
+      "acknowledge_duplicate_delivery"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean",
+        "description": "Assertion of the currently authenticated mode; never selects or overrides it. For get, identifies the frozen operation mode."
+      },
+      "confirmed": {
+        "const": true
+      },
+      "log_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,200}$"
+      },
+      "acknowledge_duplicate_delivery": {
+        "const": true
+      }
+    }
+  },
+  "get": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean",
+        "description": "Assertion of the currently authenticated mode; never selects or overrides it. For get, identifies the frozen operation mode."
+      }
+    }
+  }
+}

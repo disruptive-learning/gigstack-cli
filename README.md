@@ -1245,3 +1245,27 @@ permanece explícitamente sin verificar.
 
 Estas funciones están implementadas y probadas sin llamadas a proveedores; consulta el estado
 de despliegue del backend antes de usarlas. No implican paridad completa de otros proveedores.
+
+Manual webhook delivery uses named commands:
+
+```bash
+gigstack webhooks test TEAM ENDPOINT --stdin --yes
+gigstack webhooks resend-current TEAM ENDPOINT --stdin --yes
+gigstack webhooks retry TEAM LOG_ID --stdin --yes
+gigstack webhooks operation TEAM OPERATION_UUID --json
+gigstack webhooks manual-schema test
+```
+
+The write JSON must contain a persisted UUID `operation_id` and `confirmed:true`.
+Test/current-event inputs also require `event` and `resource_id`; retry/current
+resend require `acknowledge_duplicate_delivery:true`. Team and endpoint/log come
+from the positional arguments, and mode is asserted from the credential (or an
+explicit `--expected-mode live|test` for a credential without mode). JSON cannot
+override those selectors. Personal user credentials are required; a team API key
+cannot impersonate its owner. Keep the original UUID and mode after a lost
+response and use `operation` for readback; no write is automatically retried.
+A submitted operation is not delivered success. Tests can target saved inactive
+endpoints, and receivers can cause real or duplicate effects even in test mode.
+Historical retry is not exact byte replay: v2 uses current state at delivery.
+Output contains only validated safe receipt metadata, never event bodies,
+receiver responses, secret headers or signing material.

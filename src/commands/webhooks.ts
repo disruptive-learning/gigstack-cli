@@ -1,3 +1,4 @@
+import { registerManualWebhookCommands } from "./manual-webhooks.js";
 import { withJsonInput, readJsonInput, segment } from "../input.js";
 import { Command } from "commander";
 import { api } from "../api.js";
@@ -6,6 +7,7 @@ import { printTable, printJson, printKeyValue, success, error, isJsonMode, spin 
 
 export function registerWebhookCommands(program: Command) {
   const webhooks = program.command("webhooks").description("Gestionar webhooks");
+  registerManualWebhookCommands(webhooks);
 
   webhooks.command("get <id>").description("Consultar URL, eventos y estado del webhook")
     .action(async id => {
