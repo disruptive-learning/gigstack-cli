@@ -1004,3 +1004,42 @@ gigstack clients stamp-pending-receipts CLIENT_ID --yes --json
 ```
 
 These new commands preserve the complete API response. Search uses `page`/`per_page`/`found`; list cursors follow the specific endpoint's returned fields. Draft update uses the complete intended body: omitted items are cleared and omitted fields can receive defaults. Read back and compare the draft before stamping. A preview returns its PDF content in the response and does not stamp the draft. CSF upload accepts a local PDF up to 5 MiB, consults SAT fiscal details and creates a client when `--client` is omitted. Pending-receipt stamping processes at most 100 receipts per call: inspect `remaining`, and treat `failed > 0` as a partial result (exit code 1). No command claims that all receipts completed merely because HTTP returned 200.
+
+### Shared branding, portal links and email DNS
+
+```bash
+gigstack branding get TEAM_ID --json
+gigstack branding update TEAM_ID --data '{"voice":null,"primary_color":"#123456"}' --yes --json
+gigstack branding portal get TEAM_ID --json
+gigstack branding portal set TEAM_ID --data '{"slug":"newname","expected_slug":"oldname","confirm_existing_links_change":true}' --yes --json
+gigstack branding upload-logo TEAM_ID --file ./logo.png --yes --json
+gigstack branding analyze-voice TEAM_ID --url https://example.com --yes --json
+gigstack email-domain get TEAM_ID --json
+gigstack email-domain set TEAM_ID --domain example.com --subdomain mail --operation-id UUID_V4 --operation-file ./email-setup.json --yes --json
+gigstack email-domain validate TEAM_ID --operation-id NEW_UUID_V4 --operation-file ./email-validate.json --yes --json
+gigstack email-domain operations get TEAM_ID UUID_V4 --json
+gigstack email-domain operations reconcile TEAM_ID UUID_V4 --json
+```
+
+These commands require an authenticated person with current team authority. Branding, portal links and email DNS affect the whole team across live/test modes. Portal renaming changes existing customer links and requires the current slug plus the separate JSON acknowledgment. Voice analysis uses the AI provider but does not save its result. Logo uploads accept PNG/JPEG up to 10 MiB; read `storage_cleanup` for retained historical objects.
+
+Email-domain writes use the configured SendGrid account; test mode and a staging API URL do not guarantee a separate provider account. Set, validate and remove require a caller-selected UUID and private 0600 journal. Reuse the same journal for the same request: the CLI reads the stored operation before considering a write. Replacing a domain may retain its previous SendGrid resource, and completed setup does not mean DNS is valid.
+
+On `outcome_unknown`, the CLI preserves the operation ID and exits 1. Read or reconcile that exact ID; do not blindly create another operation. After the server's ten-minute recovery deadline, a current administrator can explicitly release the lock:
+
+```bash
+gigstack email-domain operations resolve TEAM_ID UUID_V4 --acknowledge-unconfirmed-effects --yes --json
+```
+
+Release does not undo or delete a possible provider effect and leaves the original outcome unknown. It only permits a new reviewed operation. Removing the configured domain uses `email-domain remove` with its own new UUID, journal and `--yes`.
+
+Income batches use `invoices batch create --file batch.json --idempotency-key <saved-key> --yes`.
+Save and reuse that header key only with the identical request; each invoice also retains its
+own `idempotency_key`. A queued batch is not confirmation of stamping. Read `batch get <id>`
+and `batch items <id> --next <cursor>`; the item page preserves `data.next` and `data.has_more`.
+Partial failures, rejected items and outcomes needing review exit nonzero while retaining JSON.
+
+`invoices import-xml --file held-cfdis.json --yes` accepts the API's `{files:[{filename,xml}]}`
+or base64 `content` format (up to 50 files). It preserves all per-file outcomes and exits nonzero
+if any file is not imported. `invoices errors --q <text> --page <n>` reads the CFDI error catalog;
+it is not a queue of failed invoices belonging to your team.

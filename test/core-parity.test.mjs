@@ -42,3 +42,14 @@ test('CSF upload is local bounded PDF and partial stamping preserves evidence wi
  const partial=await f.run(['clients','stamp-pending-receipts','client_test','--yes']);assert.equal(partial.code,1);assert.equal(JSON.parse(partial.stdout).data.remaining,4);
  const count=f.requests.length;await writeFile(file,'not a PDF');assert.equal((await f.run(['clients','upload-csf','--file',file,'--yes'])).code,1);assert.equal(f.requests.length,count);
 });
+
+test('invoice batch preserves stable header/body keys, paged outcomes and XML partial failures', async t => {
+ const f=await fixture(t,req=>req.url.includes('/import')?{success:false,data:{summary:{imported:0,not_imported:1},results:[{filename:'one.xml',success:false,error:'synthetic invalid XML'}]}}:req.url.includes('/items')?{success:true,data:{data:[{status:'needs_review'}],next:'cursor',has_more:true}}:{success:true,data:{id:'batch_test',result:null,rejected:[],counts:{failed:0}}});
+ const body={invoices:[{idempotency_key:'item-stable-key',client:{id:'c'},items:[]}]};
+ for(let i=0;i<2;i++) { const r=await f.run(['invoices','batch','create','--stdin','--idempotency-key','batch-stable-key','--yes'],JSON.stringify(body));assert.equal(r.code,0,r.stdout);assert.equal(f.requests.at(-1).headers['idempotency-key'],'batch-stable-key');assert.deepEqual(JSON.parse(f.requests.at(-1).body),body); }
+ assert.equal((await f.run(['invoices','batch','get','batch_test'])).code,0);
+ const items=await f.run(['invoices','batch','items','batch_test','--next','opaque','--limit','2','--status','needs_review']);assert.equal(items.code,1);assert.equal(JSON.parse(items.stdout).data.next,'cursor');assert.equal(new URL(f.requests.at(-1).url,f.base).searchParams.get('next'),'opaque');
+ const imported=await f.run(['invoices','import-xml','--data','{"files":[{"filename":"one.xml","xml":"<invalid/>"}]}','--yes']);assert.equal(imported.code,1);assert.equal(JSON.parse(imported.stdout).data.results[0].filename,'one.xml');
+ const read=await f.run(['invoices','errors','--q','receiver tax','--page','2','--type','receiver']);assert.equal(read.code,0);assert.equal(new URL(f.requests.at(-1).url,f.base).searchParams.get('q'),'receiver tax');
+ const count=f.requests.length;const invalid=await f.run(['invoices','batch','create','--data','{}','--idempotency-key','bad key','--yes']);assert.equal(invalid.code,1);assert.equal(f.requests.length,count);
+});

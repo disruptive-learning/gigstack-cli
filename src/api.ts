@@ -28,9 +28,10 @@ export function getApiKey(override?: string): string {
 export async function api(
   method: string,
   path: string,
-  opts?: { body?: any; form?: FormData; sideEffect?: boolean; query?: Record<string, string>; apiKey?: string; team?: string }
+  opts?: { body?: any; form?: FormData; sideEffect?: boolean; idempotencyKey?: string; query?: Record<string, string>; apiKey?: string; team?: string }
 ) {
   const apiKey = getApiKey(opts?.apiKey);
+  if (opts?.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
 
   if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Ruta de API inválida");
   const url = new URL(`${apiBaseUrl()}${path}`);
@@ -54,6 +55,7 @@ export async function api(
       signal: AbortSignal.timeout(timeout),
       headers: {
         Authorization: `Bearer ${apiKey}`,
+        ...(opts?.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
         ...(opts?.form ? {} : { "Content-Type": "application/json" }),
       },
       body: opts?.form ?? (opts?.body !== undefined ? JSON.stringify(opts.body) : undefined),

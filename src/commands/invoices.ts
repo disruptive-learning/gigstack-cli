@@ -1,12 +1,12 @@
 import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
 import { registerSupportDocumentCommands } from "./documents.js";
-import { segment, requireConfirmation } from "../input.js";
+import { segment, requireConfirmation, readJsonInput } from "../input.js";
 import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import pc from "picocolors";
-import { api } from "../api.js";
+import { api, ApiError } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
@@ -18,6 +18,51 @@ function uid(item: any): string {
 export function registerInvoiceCommands(program: Command) {
   const invoices = program.command("invoices").description("Gestionar facturas CFDI");
   registerSupportDocumentCommands(invoices, "invoices");
+  const printBatch = (response: any) => {
+    printJson(response);
+    if (["partially_completed", "failed"].includes(response.data?.result) || response.data?.rejected?.length > 0 || response.data?.counts?.failed > 0 || response.data?.counts?.needs_review > 0) process.exitCode = 1;
+  };
+  const batch = invoices.command("batch").description("Submit income invoices and inspect asynchronous outcomes");
+  withCompleteBody(batch.command("create").description("Queue up to 1,000 invoices; preserve the batch header key and each item's idempotency_key"))
+    .requiredOption("--idempotency-key <key>", "Stable caller-saved batch key, reused only with the identical body")
+    .action(async opts => {
+      const body = await readJsonInput(opts);
+      await requireConfirmation(opts.yes, "Queue these invoices with their supplied delivery and automation settings?");
+      printBatch(await api("POST", "/invoices/income/batch", { body, team: opts.team, idempotencyKey: opts.idempotencyKey }));
+    });
+  batch.command("get <id>").description("Read batch progress; partial or failed results exit nonzero")
+    .action(async id => printBatch(await api("GET", `/invoices/income/batch/${segment(id)}`)));
+  batch.command("items <id>").description("Read one page of batch item outcomes, preserving data.next and data.has_more")
+    .option("--limit <n>", "Page size").option("--next <cursor>", "Opaque next cursor").option("--status <status>", "Item status")
+    .action(async (id, opts) => {
+      const query: Record<string, string> = {};
+      for (const key of ["limit", "next", "status"]) if (opts[key] !== undefined) query[key] = opts[key];
+      const response = await api("GET", `/invoices/income/batch/${segment(id)}/items`, { query });
+      printJson(response);
+      if (response.data?.data?.some((item: any) => ["failed", "needs_review"].includes(item.status))) process.exitCode = 1;
+    });
+  invoices.command("errors").description("Read the CFDI error catalog; this is not the team's failed-invoice queue")
+    .option("--code <code>", "Exact CFDI error code").option("--q <text>", "Search code/explanation/solution")
+    .option("--type <type>", "invoice, receiver, sender or unknown").option("--limit <n>", "Page size, maximum 100").option("--page <n>", "Page number")
+    .action(async opts => {
+      const query: Record<string, string> = {};
+      for (const key of ["code", "q", "type", "limit", "page"]) if (opts[key] !== undefined) query[key] = opts[key];
+      printJson(await api("GET", "/invoices/errors", { query }));
+    });
+  withCompleteBody(invoices.command("import-xml").description("Import up to 50 held CFDIs with {files:[{filename,xml|content}]} and preserve per-file outcomes"))
+    .action(async opts => {
+      const body = await readJsonInput(opts);
+      await requireConfirmation(opts.yes, "Import these held CFDI XMLs into the selected team's records?");
+      let response: any;
+      try { response = await api("POST", "/invoices/import", { body, team: opts.team }); }
+      catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 200 || !error.body?.data?.summary) throw error;
+        response = error.body;
+      }
+      printJson(response);
+      if (response.success === false || response.data?.summary?.not_imported > 0) process.exitCode = 1;
+    });
+
   invoices.command("payment-get <id>").description("Leer CFDI de complemento de pago (tipo P); conserva respuesta completa")
     .action(async id => printJson(await api("GET", `/invoices/payment/${segment(id)}`)));
 
