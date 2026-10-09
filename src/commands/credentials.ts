@@ -33,10 +33,10 @@ export function registerCredentialCommands(program: Command) {
       await requireConfirmation(opts.yes, `¿Revocar la clave API ${id}?`);
       printJson(await api("DELETE", path));
     });
-  keys.command("emergency-revoke").description("Revocar TODAS las claves API y MCP asociadas al equipo, incluida la credencial actual si es MCP; excluye OAuth")
-    .option("-y, --yes", "Confirmar revocación de claves API y MCP del equipo")
+  keys.command("emergency-revoke").description("Revocar claves API/MCP legacy del equipo; puede terminar esta conexión MCP legacy. Claves scoped y OAuth permanecen activas")
+    .option("-y, --yes", "Confirmar revocación de claves API/MCP legacy del equipo")
     .action(async opts => {
-      await requireConfirmation(opts.yes, "¿Revocar todas las claves API y MCP del equipo? OAuth permanecerá activo.");
+      await requireConfirmation(opts.yes, "¿Revocar las claves API/MCP legacy del equipo? Las claves scoped y OAuth permanecerán activas.");
       printJson(await api("POST", "/api-keys/emergency-revoke", { body: {} }));
     });
 }

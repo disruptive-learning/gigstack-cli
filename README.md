@@ -1440,9 +1440,9 @@ untouched. Preserve the UUID and inspect state after a timeout; never automatica
 rotate again. Migrate and verify one integration at a time before deliberately
 revoking its old credential.
 
-The initial scoped catalog covers reviewed business reads and client/service CRUD.
-Fiscal writes, refunds, automation, team/user administration and credential lifecycle
-are unavailable to scoped keys. Unknown/unreviewed routes return
-`scoped_action_unavailable`. Scoped client updates require
-`check_pending_receipts:false`; `POST /clients` with `search.update:true` requires
-both `createClients` and `updateClientsById`.
+The first scoped catalog permits business reads (including client reads) and
+service CRUD. Client mutations, fiscal issuance/cancellation, refunds, automation,
+team/user administration and credential lifecycle are not grantable. Client writes
+can trigger downstream Stripe/fiscal effects whose scope proof is not yet covered.
+Unknown/unreviewed routes return `scoped_action_unavailable`; existing legacy
+credentials retain their existing behavior. Use the policy catalog's exact IDs.
