@@ -299,7 +299,7 @@ export function registerInvoiceCommands(program: Command) {
   drafts.command("get <id>").action(async id => printJson(await api("GET", `/invoices/draft/${segment(id)}`)));
   withCompleteBody(drafts.command("create").description("Save a draft from its full JSON body"))
     .action(async (opts, command) => sendCompleteBody(command, opts, "POST", "/invoices/draft"));
-  withCompleteBody(drafts.command("update <id>").description("Update supplied draft fields"))
+  withCompleteBody(drafts.command("update <id>").description("Replace draft content with the complete intended body; omitted items are cleared"))
     .action(async (id, opts, command) => sendCompleteBody(command, opts, "PUT", `/invoices/draft/${segment(id)}`));
   for (const [name, method, suffix] of [["delete", "DELETE", ""], ["preview", "POST", "/preview"]]) {
     drafts.command(`${name} <id>`).option("-y, --yes", "Confirm this draft operation")
