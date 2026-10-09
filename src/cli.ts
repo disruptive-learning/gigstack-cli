@@ -1,3 +1,4 @@
+import { registerAccountInvitationCommands } from "./commands/account-invitations.js";
 import { Command } from "commander";
 import pc from "picocolors";
 import { setJsonMode, error, finishOutput } from "./output.js";
@@ -72,6 +73,7 @@ registerEmailDomainCommands(program);
 registerLogCommands(program);
 registerDocumentCommands(program);
 registerSelfCommands(program);
+registerAccountInvitationCommands(program);
 registerReceiptCommands(program);
 registerCompletionsCommand(program);
 registerExportCommand(program);

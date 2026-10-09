@@ -1,3 +1,4 @@
+import { invitationPayload } from "../invitation-contract.js";
 import { approvalTeam, membershipTarget, prepareApproval } from "../account-approvals.js";
 import { registerFiscalSessionCommands } from "./fiscal-sessions.js";
 import { readFile } from "node:fs/promises";
@@ -127,18 +128,26 @@ export function registerTeamCommands(program: Command) {
       await prepareApproval(opts.operationId, "team.ownership.transfer", approvalTeam(id), { new_owner_id: membershipTarget(newOwnerId) });
     });
 
-  const invites = teams.command("invitations").description("Invitaciones por correo; administración requiere identidad de usuario admin");
+  const invites = teams.command("invitations").description("Editor/viewer directos; admin prepara revisión del propietario, sin envío ni ingreso");
   invites.command("list <id>").action(async id => call("GET", `${target(id)}/invitations`));
   invites.command("get <id> <inviteId>")
     .action(async (id, inviteId) => call("GET", `${target(id)}/invitations/${segment(inviteId)}`));
   invites.command("create <id>").requiredOption("--email <email>", "Correo del destinatario")
     .option("--role <role>", "admin, editor o viewer", "viewer")
+    .option("--send-email", "Solicitar envío (explícito para admin)")
     .option("--no-send-email", "Crear sin enviar correo")
-    .action(async (id, opts) => {
+    .option("--operation-id <uuid>", "Preparar aprobación admin con UUIDv4 persistido")
+    .option("--existing-invitation <id>", "Recuperar invitación admin existente; requiere --no-send-email")
+    .action(async (id, opts, command) => {
       if (!["admin", "editor", "viewer"].includes(opts.role)) throw new Error("Rol inválido");
-      await call("POST", `${target(id)}/invitations`, { email: opts.email, role: opts.role, send_email: opts.sendEmail });
+      if (opts.role === "admin") {
+        if (command.getOptionValueSource("sendEmail") !== "cli") throw new Error("Para admin elige explícitamente --send-email o --no-send-email");
+        return prepareApproval(opts.operationId, "team.invitations.create_admin", approvalTeam(id), invitationPayload(opts.email,opts.sendEmail,opts.existingInvitation));
+      }
+      if (opts.operationId || opts.existingInvitation) throw new Error("Las opciones de aprobación sólo aplican a admin");
+      await call("POST", `${target(id)}/invitations`, { email: opts.email, role: opts.role, send_email: opts.sendEmail ?? true });
     });
-  invites.command("resend <id> <inviteId>").description("Reenviar el correo de invitación")
+  invites.command("resend <id> <inviteId>").description("Reenviar editor/viewer; para admin usa account-invitations resend con autoridad de propietario")
     .action(async (id, inviteId) => call("POST", `${target(id)}/invitations/${segment(inviteId)}/resend`, {}));
   invites.command("revoke <id> <inviteId>").option("-y, --yes", "Confirmar revocación")
     .action(async (id, inviteId, opts) => {

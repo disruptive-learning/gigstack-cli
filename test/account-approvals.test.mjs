@@ -44,7 +44,7 @@ const operation = '00000000-0000-4000-8000-000000000001';
 const id = 'a'.repeat(64);
 const approval = { id, operation_id: operation, action: 'api_keys.generate', team: { id:'team_b',legal_name:null,tax_id:null }, billing_account_id:'ba_fixture',payload:{},requested_modes:[true,false],effect_scope:'team_credentials',status:'pending',created_at:1,expires_at:600001,completed_at:null,review_url:`https://app.gigstack.pro/account/approvals/${id}`,can_cancel:true,disclosure_version:'credential-approval-v1',existing_key_ids:[],terms:null,membership_change:null,receipt:null,error:null };
 test('prepare API creation, rotation and MCP token uses stable explicit IDs without issuing credentials', async t => {
- const f = await fixture(t, () => ({success:true,data:approval}));
+ const f = await fixture(t, req => {const body=JSON.parse(req.body);return {success:true,data:{...approval,action:body.action,payload:body.payload}};});
  const cases = [
   [['api-keys','create'], 'api_keys.generate', {}],
   [['api-keys','rotate'], 'api_keys.rotate', {}],
@@ -53,7 +53,7 @@ test('prepare API creation, rotation and MCP token uses stable explicit IDs with
  for (const [args,action,payload] of cases) {
   for(let attempt=0;attempt<2;attempt++) {
    const result=await f.run([...args,'--operation-id',operation,'--team','team_b','--json']);
-   assert.equal(result.code,0,result.stdout+result.stderr); assert.deepEqual(json(result).data,approval);
+   assert.equal(result.code,0,result.stdout+result.stderr); assert.deepEqual(json(result).data,{...approval,action,payload});
    const req=f.requests.at(-1); assert.equal(req.method,'POST');assert.equal(new URL(req.url,f.base).pathname,'/v2/users/me/account-approvals');
    assert.deepEqual(JSON.parse(req.body),{operation_id:operation,action,team_id:'team_b',payload});
    assert.match(json(result).next_step,/preparar no emite/);
@@ -154,5 +154,73 @@ test('membership transport timeout preserves the stable ID and never retries the
   const r=await f.run([...args,'--operation-id',operation,'--json'],{timeoutAfterHeaders:true});
   assert.equal(r.code,1);assert.equal(json(r).error.code,'approval_not_confirmed');assert.match(r.stdout,RegExp(operation));
   assert.equal(f.requests.length,1);assert.equal(f.requests[0].method,'POST');assert.deepEqual(JSON.parse(f.requests[0].body),{operation_id:operation,action,team_id:'team_b',payload});
+ }
+});
+
+function invitationApproval(billing=false,recovery=false) {
+ const change={id:recovery?'inv_existing':'inv_new',type:billing?'billingAccount':'team',email:'new@example.test',role:'admin',team_id:billing?null:'team_b',billing_account_id:'ba_fixture',billing_account_name:'Fixture',inviter:{id:'owner_fixture',email:'owner@example.test',display_name:'Owner'},send_email:!recovery,expires_at:700001,existing_invitation:recovery,prior_delivery_status:recovery?'unknown':null};
+ return {...approval,action:billing?'billing_account.invitations.create_admin':'team.invitations.create_admin',team:billing?null:approval.team,payload:{email:change.email,send_email:change.send_email,...(recovery?{existing_invitation_id:change.id}:{})},requested_modes:[],effect_scope:billing?'billing_account_membership':'team_membership',disclosure_version:'invitation-approval-v1',invitation_change:change};
+}
+const ownedInvite={id:'inv_new',email:'new@example.test',role:'admin',type:'billingAccount',team_id:null,billing_account_id:'ba_fixture',approval_required:false,status:'pending',created_at:1,expires_at:700001,created_by:'owner_fixture',delivery:{status:'sent',attempted_at:2}};
+test('team and billing invitation preparation requires exact scope/send choice and preserves operation IDs',async t=>{
+ for(const billing of [false,true]) for(const recovery of [false,true]) {
+  const data=invitationApproval(billing,recovery),f=await fixture(t,()=>({success:true,data}));
+  const args=['account-invitations',billing?'prepare-billing':'prepare-team',billing?'ba_fixture':'team_b','--email','NEW@example.test','--operation-id',operation,recovery?'--no-send-email':'--send-email',...(recovery?['--existing-invitation','inv_existing']:[]),'--json'];
+  for(let attempt=0;attempt<2;attempt++){
+   const r=await f.run(args);assert.equal(r.code,0,r.stdout+r.stderr);assert.deepEqual(json(r).data,data);assert.match(json(r).next_step,/Preparar no envía correo/);
+   const req=f.requests.at(-1);assert.deepEqual(JSON.parse(req.body),{operation_id:operation,action:data.action,...(billing?{billing_account_id:'ba_fixture'}:{team_id:'team_b'}),payload:data.payload});
+   const url=new URL(req.url,f.base);assert.equal(url.pathname,'/v2/users/me/account-approvals');assert.equal(url.searchParams.get('team'),billing?null:'team_b');
+  }
+ }
+});
+test('existing team create admin command prepares an approval and rejects direct/mixed input',async t=>{
+ const f=await fixture(t,()=>({data:invitationApproval()}));
+ const args=['teams','invitations','create','team_b','--role','admin','--email','new@example.test'];
+ let r=await f.run([...args,'--operation-id',operation,'--send-email','--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.equal(new URL(f.requests[0].url,f.base).pathname,'/v2/users/me/account-approvals');
+ for(const suffix of [[],['--operation-id',operation],['--send-email'],['--operation-id',operation,'--send-email','--existing-invitation','inv_existing'],['--operation-id',operation,'--send-email','--team','other']]) {
+  r=await f.run([...args,...suffix,'--json']);assert.equal(r.code,1,r.stdout+r.stderr);
+ }
+ assert.equal(f.requests.length,1);
+});
+test('owned invitation metadata and exact explicit resend/revoke never expose tokens or unexpected secrets',async t=>{
+ const f=await fixture(t,()=>({data:{...ownedInvite,token:'synthetic-secret',review_challenge:'synthetic-secret',delivery:{...ownedInvite.delivery,claim:'synthetic-secret'}}}));
+ for(const [args,method,body] of [[['get','inv_new'],'GET',undefined],[['revoke','inv_new','--yes'],'DELETE',{}],[['resend','inv_new','--yes','--acknowledge-unconfirmed-delivery'],'POST',{acknowledge_unconfirmed_delivery:true}]]) {
+  const r=await f.run(['account-invitations',...args,'--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.deepEqual(json(r).data,ownedInvite);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret|review_challenge|claim/);
+  const req=f.requests.at(-1);assert.equal(req.method,method);assert.equal(req.url,`/v2/users/me/account-invitations/inv_new${method==='POST'?'/resend':''}`);assert.deepEqual(req.body?JSON.parse(req.body):undefined,body);
+ }
+});
+test('invitation mutations require confirmation; unknown status exits nonzero and transport failure never retries',async t=>{
+ const f=await fixture(t,()=>({data:{...ownedInvite,delivery:{status:'unknown',attempted_at:2}}}));
+ for(const cmd of ['revoke','resend']) {
+  const r=await f.run(['account-invitations',cmd,'inv_new','--json']);assert.equal(r.code,1);assert.equal(f.requests.length,0);
+ }
+ const read=await f.run(['account-invitations','get','inv_new','--json']);assert.equal(read.code,1);assert.equal(json(read).data.delivery.status,'unknown');
+ for(const response of [{status:409,error:{code:'delivery_outcome_unknown',message:'synthetic-secret'}},{timeoutAfterHeaders:true}]){
+  const timed=await fixture(t,()=>response);const r=await timed.run(['account-invitations','resend','inv_new','--yes','--json'],{timeoutAfterHeaders:!!response.timeoutAfterHeaders});
+  assert.equal(r.code,1);assert.equal(timed.requests.length,1);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret/);assert.match(r.stdout,/No se reintentó automáticamente/);
+ }
+});
+test('completed invitation receipts preserve binding and redact secrets; malformed scope is rejected',async t=>{
+ const data=invitationApproval(true),c=data.invitation_change;
+ data.status='completed';data.completed_at=2;data.receipt={keys:[],revoked_count:0,membership:null,invitation:{id:c.id,type:c.type,email:c.email,role:'admin',team_id:c.team_id,billing_account_id:c.billing_account_id,expires_at:c.expires_at,approval_id:id}};
+ const f=await fixture(t,()=>({data:{...data,token:'synthetic-secret',receipt:{...data.receipt,invitation:{...data.receipt.invitation,token:'synthetic-secret'}}}}));
+ const r=await f.run(['account-approvals','get',id,'--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.deepEqual(json(r).data,data);assert.doesNotMatch(r.stdout,/synthetic-secret/);assert.match(json(r).next_step,/no prueba entrega ni ingreso/);
+ for(const bad of [{...data,team:approval.team},{...data,receipt:{...data.receipt,invitation:{...data.receipt.invitation,email:'other@example.test'}}}]){
+  const badf=await fixture(t,()=>({data:bad}));const result=await badf.run(['account-approvals','get',id,'--json']);assert.equal(result.code,1);
+ }
+});
+
+test('response identities must match exact prepared intent or requested read/revoke reference',async t=>{
+ const data=invitationApproval();
+ for(const response of [invitationApproval(true),{...data,operation_id:'00000000-0000-4000-8000-000000000002'},{...data,team:{...data.team,id:'other'},invitation_change:{...data.invitation_change,team_id:'other'}},{...data,payload:{...data.payload,email:'other@example.test'},invitation_change:{...data.invitation_change,email:'other@example.test'}}]) {
+  const f=await fixture(t,()=>({data:response}));
+  const r=await f.run(['account-invitations','prepare-team','team_b','--email','new@example.test','--send-email','--operation-id',operation,'--json']);
+  assert.equal(r.code,1);assert.equal(f.requests.length,1);assert.doesNotMatch(r.stdout,/review_url/);
+ }
+ for(const cmd of ['get','cancel']){
+  const f=await fixture(t,()=>({data}));const r=await f.run(['account-approvals',cmd,'b'.repeat(64),...(cmd==='cancel'?['--yes']:[]),'--json']);assert.equal(r.code,1);assert.equal(f.requests.length,1);
+ }
+ for(const cmd of ['get','revoke','resend']){
+  const f=await fixture(t,()=>({data:ownedInvite}));const r=await f.run(['account-invitations',cmd,'different',...(cmd==='get'?[]:['--yes']),'--json']);assert.equal(r.code,1);assert.equal(f.requests.length,1);
  }
 });

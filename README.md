@@ -1116,3 +1116,38 @@ gigstack logs webhooks get TEAM_ID LOG_ID --json
 Lists return `has_more` and `next_cursor`. Follow the cursor with the same team, credential mode, limit and filters, even when the page has no matching rows. Optional `--from`/`--to` accept inclusive epoch milliseconds. `--endpoint` matches a redacted API route prefix; variable path segments appear as `:id`.
 
 These reads preserve log metadata and bounded body structure while withholding historical body values, headers, credentials and private URLs. They are not raw payload exports. Missing-mode webhook records are excluded; collection retention limits available history. Pending and unknown deliveries are not success. The delivery log ID is the web's log identifier, and `retry_requested` only reports a request flag. Reading a failed delivery does not resend it.
+
+### Administrator invitation approvals
+
+```bash
+gigstack account-invitations prepare-team TEAM_ID --email person@example.com --operation-id UUID_V4 --send-email --json
+gigstack account-invitations prepare-billing BILLING_ACCOUNT_ID --email person@example.com --operation-id UUID_V4 --no-send-email --json
+gigstack account-invitations prepare-team TEAM_ID --email person@example.com --existing-invitation INVITE_ID --operation-id UUID_V4 --no-send-email --json
+gigstack account-invitations get INVITE_ID --json
+gigstack account-invitations revoke INVITE_ID --yes --json
+gigstack account-invitations resend INVITE_ID --yes --json
+```
+
+Preparation requires an explicit send choice and a caller-persisted UUIDv4. It
+returns a review URL without sending or granting access. Preserve the same UUID
+and exact payload after an uncertain prepare response. Team invitations require
+the current team owner; billing invitations require the canonical billing-account
+owner. `--team` remains credential context and never substitutes for the explicit
+billing-account argument. The existing `teams invitations create` command also
+prepares approval for `--role admin` with `--operation-id` and an explicit
+`--send-email` or `--no-send-email`; editor/viewer creation retains its direct flow.
+
+The owner opens the private review URL and confirms the frozen recipient, scope,
+expiry and send choice after signing in recently. Recovering an existing pending
+admin invitation requires `--no-send-email` and preserves its original expiry.
+Completed approval means invitation recorded, not email delivered or recipient
+joined. There are no CLI review/execute commands or invitation-token outputs.
+
+Owner read/revoke/resend use the invitation's stored scope. Revoke cancels a pending
+invitation; it does not remove a member. Unknown/failed delivery exits 1 with safe
+metadata. Read status before deciding to resend: an earlier email may already have
+arrived. Only after that explicit decision, use
+`account-invitations resend INVITE_ID --acknowledge-unconfirmed-delivery --yes --json`.
+Transport failures exit 1 without automatic retries or raw provider messages.
+The older `teams invitations resend` command is for editor/viewer invitations;
+use `account-invitations resend` for administrator invitations after approval.
