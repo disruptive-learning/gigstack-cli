@@ -119,6 +119,7 @@ export function registerLogCommands(program: Command) {
         name,
         true,
       );
+      if (result.data.id !== id) throw new Error("Identidad del log cambió");
       if (name === "api" && result.data.team_id !== team)
         throw new Error("Equipo del log cambió");
       if (opts.output) {

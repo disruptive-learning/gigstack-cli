@@ -333,3 +333,49 @@ test("log detail projects shape vocabulary and legacy absent additions safely", 
   assert.equal(json(result).data.resource_id, undefined);
   assert.equal(json(result).data.payload_shape.email, "[REDACTED]");
 });
+
+test("detail refuses another identity without printing data or writing an artifact", async (t) => {
+  const f = await fixture(t, () => ({
+    data: {
+      id: "different",
+      team_id: "team_b",
+      timestamp: null,
+      updated_at: null,
+      webhook_id: null,
+      event: null,
+      livemode: false,
+      status: "unknown",
+      response_code: null,
+      retry_requested: false,
+      redaction: "metadata_and_body_shape",
+      payload_shape: null,
+      response_shape: null,
+      method: "GET",
+      endpoint: "/v2/invoices",
+      status_code: 200,
+      request_shape: null,
+      query_shape: null,
+      payload_redaction: "allowlisted_structured_values_v1",
+      request_payload: null,
+      query_payload: null,
+      response_payload: null,
+    },
+  }));
+  const folder = await mkdtemp(join(tmpdir(), "gigstack-log-identity-"));
+  t.after(() => rm(folder, { recursive: true, force: true }));
+  const output = join(folder, "log.json");
+  for (const name of ["api", "webhooks"]) {
+    const result = await f.run([
+      "logs",
+      name,
+      "get",
+      "team_b",
+      "requested",
+      ...(name === "api" ? ["--output", output] : []),
+      "--json",
+    ]);
+    assert.equal(result.code, 1);
+    assert.equal(result.stdout.includes('"id":"different"'), false);
+  }
+  await assert.rejects(stat(output), { code: "ENOENT" });
+});
