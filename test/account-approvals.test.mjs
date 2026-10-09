@@ -224,3 +224,37 @@ test('response identities must match exact prepared intent or requested read/rev
   const f=await fixture(t,()=>({data:ownedInvite}));const r=await f.run(['account-invitations',cmd,'different',...(cmd==='get'?[]:['--yes']),'--json']);assert.equal(r.code,1);assert.equal(f.requests.length,1);
  }
 });
+
+const managedPayload={email:'managed@example.test',first_name:'Managed',address:{country:'MEX',city:null}};
+function managedApproval(status='pending'){
+ const completed=status==='completed',activation=status==='activation_required';
+ return {...approval,action:'managed_users.create_admin',payload:managedPayload,requested_modes:[],effect_scope:'managed_identity',disclosure_version:'managed-identity-v1',status,can_cancel:status==='pending',completed_at:completed?2:null,invitation_change:null,managed_identity_change:{user_id:'managed_user',email:managedPayload.email,profile:{first_name:'Managed',address:{city:null,country:'MEX'}},team_id:'team_b',billing_account_id:'ba_fixture',role:'admin',auto_join:true,credential_delivery:'none',initial_auth_state:'disabled',bootstrap_effects:['profile_initialization','membership_usage_initialization','support_identity_claims']},managed_identity_execution:status==='pending'?null:{phase:completed?'complete':activation?'activation_required':'creating',auth_state:completed?'enabled':activation?'disabled':'unknown',membership_granted:completed,started_at:1,updated_at:2,error_code:null},receipt:completed?{keys:[],revoked_count:0,membership:null,invitation:null,managed_identity:{user_id:'managed_user',team_id:'team_b',billing_account_id:'ba_fixture',role:'admin',auth_state:'enabled',membership_granted:true}}:null};
+}
+test('managed admin preparation preserves nested profile and uses only the stable personal approval endpoint',async t=>{
+ const f=await fixture(t,()=>({data:managedApproval()}));
+ const args=['users','create-admin','--operation-id',operation,'--team','team_b','--data',JSON.stringify(managedPayload),'--json'];
+ for(let i=0;i<2;i++){const result=await f.run(args);assert.equal(result.code,0,result.stdout+result.stderr);assert.deepEqual(json(result).data.payload,managedPayload);assert.match(json(result).next_step,/disabled identity/);}
+ assert.equal(f.requests.length,2);
+ for(const req of f.requests){assert.equal(req.method,'POST');assert.equal(new URL(req.url,f.base).pathname,'/v2/users/me/account-approvals');assert.deepEqual(JSON.parse(req.body),{operation_id:operation,action:'managed_users.create_admin',team_id:'team_b',payload:managedPayload});}
+ for(const payload of [{...managedPayload,password:'synthetic-secret'},{...managedPayload,role:'admin'},{...managedPayload,auto_join:false},{...managedPayload,address:{secret:'synthetic-secret'}}]){const r=await f.run(['users','create-admin','--operation-id',operation,'--team','team_b','--data',JSON.stringify(payload),'--json']);assert.equal(r.code,1);}
+ const direct=await f.run(['users','create','--data',JSON.stringify({...managedPayload,role:'admin'}),'--json']);assert.equal(direct.code,1);assert.equal(f.requests.length,2);
+});
+test('managed reconcile projects every lifecycle stage, preserves unknown and never invokes browser terminals',async t=>{
+ for(const status of ['pending','processing','unknown','activation_required','completed']){
+  const data=managedApproval(status);data.secrets={token:'synthetic-secret'};data.review_challenge='synthetic-secret';data.managed_identity_change.private_record='synthetic-secret';if(data.receipt)data.receipt.managed_identity.token='synthetic-secret';
+  const f=await fixture(t,()=>({data}));const r=await f.run(['account-approvals','reconcile',id,'--json']);assert.equal(r.code,status==='unknown'?1:0,r.stdout+r.stderr);const out=json(r);assert.equal(out.data.status,status);assert.equal(out.data.managed_identity_change.user_id,'managed_user');assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret|review_challenge|private_record/);assert.equal(f.requests.length,1);assert.equal(f.requests[0].method,'POST');assert.equal(f.requests[0].url,`/v2/users/me/account-approvals/${id}/reconcile`);assert.deepEqual(JSON.parse(f.requests[0].body),{});
+  if(status==='activation_required')assert.match(out.next_step,/new review/);if(status==='unknown')assert.match(out.next_step,/Do not repeat/);
+ }
+});
+test('managed responses refuse mismatched scope, invalid completion, and uncertain errors without retries or secret output',async t=>{
+ for(const data of [{...managedApproval(),id:'b'.repeat(64)},{...managedApproval(),managed_identity_change:{...managedApproval().managed_identity_change,team_id:'foreign'}},{...managedApproval('completed'),managed_identity_execution:{...managedApproval('completed').managed_identity_execution,auth_state:'disabled'}}]){
+  const f=await fixture(t,()=>({data}));const r=await f.run(['account-approvals','reconcile',id,'--json']);assert.equal(r.code,1);assert.equal(f.requests.length,1);
+ }
+ const f=await fixture(t,()=>({status:503,error:{message:'synthetic-secret'}}));const r=await f.run(['account-approvals','reconcile',id,'--json']);assert.equal(r.code,1);assert.equal(f.requests.length,1);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret/);assert.match(r.stdout,RegExp(id));
+ for(const action of ['execute','continue','review']){const r=await f.run(['account-approvals',action,id,'--json']);assert.equal(r.code,1);}assert.equal(f.requests.length,1);
+});
+
+test('invalidated managed creation preserves recovery reference without suggesting another identity',async t=>{
+ const f=await fixture(t,()=>({data:{...managedApproval('invalidated'),error:{code:'scope_changed',message:'Changed',retryable:false}}}));
+ const r=await f.run(['account-approvals','get',id,'--json']);assert.equal(r.code,1);assert.match(json(r).data.error.message,/no repitas/);assert.doesNotMatch(json(r).data.error.message,/nueva aprobación/);assert.equal(f.requests.length,1);
+});

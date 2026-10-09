@@ -1151,3 +1151,27 @@ arrived. Only after that explicit decision, use
 Transport failures exit 1 without automatic retries or raw provider messages.
 The older `teams invitations resend` command is for editor/viewer invitations;
 use `account-invitations resend` for administrator invitations after approval.
+
+### Managed administrator creation (coordinated release)
+
+Use a personal Firebase/MCP credential belonging to both the canonical team owner
+and billing-account owner. Save a UUIDv4 before preparing the request:
+
+```sh
+gigstack users create-admin --team TEAM_ID --operation-id SAVED_UUID --data '{"email":"managed@example.test","first_name":"Managed"}' --json
+gigstack account-approvals get APPROVAL_ID --json
+gigstack account-approvals reconcile APPROVAL_ID --json
+```
+
+Open `review_url` to review disabled identity creation and its bootstrap records.
+After `activation_required`, return there for a second review before membership is
+granted and Auth enabled. Preparation/reconciliation issue no credentials or email.
+Unknown outcomes exit nonzero and must not trigger another creation or activation;
+read evidence with `reconcile` and preserve the approval ID for operator recovery.
+The CLI has no review/execute/continue terminal. Existing managed session links,
+password-reset delivery and deletion still require the separate security migration.
+
+`users create` remains available for viewer/editor creation; `role:admin` points to
+`users create-admin`. If team and billing owners differ, create a nonadmin identity
+first, then use the existing owner-reviewed promotion. Direct nonadmin creation is
+not idempotent: preserve the returned reference after `managed_creation_unconfirmed`.

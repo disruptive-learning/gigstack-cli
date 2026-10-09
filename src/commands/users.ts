@@ -1,3 +1,5 @@
+import { managedInput } from '../managed-identity-contract.js';
+import { approvalTeam, prepareApproval } from '../account-approvals.js';
 import { Command } from "commander";
 import { api } from "../api.js";
 import { withListOpts, buildListQuery } from "../list-opts.js";
@@ -12,9 +14,13 @@ export function registerUserCommands(program: Command) {
     .action(async opts => show(await api("GET", "/users", { query: buildListQuery(opts) })));
   users.command("get <id>").description("Consultar usuario accesible")
     .action(async id => show(await api("GET", `/users/${segment(id)}`)));
+  withJsonInput(users.command("create-admin").description("Prepare managed administrator creation for two browser reviews; --team and both canonical ownerships required")
+    .requiredOption("--operation-id <uuid>", "Persisted UUIDv4; reuse only for identical preparation"))
+    .action(async opts => prepareApproval(opts.operationId, "managed_users.create_admin", approvalTeam(), managedInput(await readJsonInput(opts))));
   withJsonInput(users.command("create").description("Crear usuario administrado: email, first_name, last_name, phone, address, auto_join y role"))
     .action(async opts => {
       const body = await readJsonInput(opts);
+      if (body.role === "admin") throw new Error("Use users create-admin with --operation-id and --team for reviewed creation. For separate creation/promotion, create a viewer/editor first.");
       if (body.role !== undefined && !["admin", "editor", "viewer"].includes(body.role)) throw new Error("role debe ser admin, editor o viewer");
       show(await api("POST", "/users", { body }));
     });

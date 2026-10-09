@@ -16,8 +16,10 @@ export function registerCredentialCommands(program: Command) {
       .requiredOption("--operation-id <uuid>", "UUIDv4 persistido; reutilizar sólo para solicitud idéntica tras respuesta incierta")
       .action(async opts => prepareApproval(opts.operationId, action === "create" ? "api_keys.generate" : "api_keys.rotate", approvalTeam(), {}));
   }
-  const approvals = program.command("account-approvals").description("Aprobaciones de credenciales: estado y cancelación, sin ejecución ni secretos");
+  const approvals = program.command("account-approvals").description("Aprobaciones de cuenta: preparación, estado y recuperación; ejecución privada en navegador");
   approvals.command("get <id>").action(async id => approvalRequest("GET", `/users/me/account-approvals/${approvalId(id)}`, id));
+  approvals.command("reconcile <id>").description("Read managed identity evidence using the originating personal credential; never creates or enables Auth")
+    .action(async id => approvalRequest("POST", `/users/me/account-approvals/${approvalId(id)}/reconcile`, id, {}));
   approvals.command("cancel <id>").option("-y, --yes", "Confirmar cancelación pendiente")
     .action(async (id, opts) => {
       approvalId(id);
