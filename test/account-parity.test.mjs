@@ -181,7 +181,6 @@ test('users and webhook administration target documented methods, scoped by glob
     [['users','create','--data','{"email":"person@example.invalid","auto_join":false,"role":"viewer"}'],'POST','/v2/users',{email:'person@example.invalid',auto_join:false,role:'viewer'}],
     [['users','update','user_a','--data','{"first_name":"Fixture"}'],'PUT','/v2/users/user_a',{first_name:'Fixture'}],
     [['users','reset-password','user_a'],'POST','/v2/users/reset-password/user_a',{}],
-    [['users','login-link','user_a','--yes'],'POST','/v2/users/login-link',{user_id:'user_a'}],
     [['users','delete','user_a','--yes'],'DELETE','/v2/users/user_a',undefined],
     [['webhooks','get','webhook_a'],'GET','/v2/webhooks/webhook_a',undefined],
     [['webhooks','update','webhook_a','--data','{"status":"inactive","description":null}'],'PUT','/v2/webhooks/webhook_a',{status:'inactive',description:null}],

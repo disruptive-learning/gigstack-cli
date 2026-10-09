@@ -258,3 +258,31 @@ test('invalidated managed creation preserves recovery reference without suggesti
  const f=await fixture(t,()=>({data:{...managedApproval('invalidated'),error:{code:'scope_changed',message:'Changed',retryable:false}}}));
  const r=await f.run(['account-approvals','get',id,'--json']);assert.equal(r.code,1);assert.match(json(r).data.error.message,/no repitas/);assert.doesNotMatch(json(r).data.error.message,/nueva aprobación/);assert.equal(f.requests.length,1);
 });
+
+function sessionApproval(action='managed_users.issue_session',status='pending') {
+ const issue=action==='managed_users.issue_session', expires=issue?3600001:null;
+ return {...approval,action,payload:{user_id:'managed_user'},requested_modes:[],effect_scope:'managed_session',disclosure_version:'managed-session-v1',status,can_cancel:status==='pending',completed_at:status==='completed'?2:null,managed_identity_change:null,managed_identity_execution:null,invitation_change:null,
+ managed_session_change:{user_id:'managed_user',email:'managed@example.test',auth_creation_time:'2026-10-08T00:00:00Z',billing_account_id:'ba_fixture',teams:[{id:'team_b',role:'admin'}],billing_accounts:[{id:'ba_fixture',role:'member'}],delivery:issue?'browser_once':'none',session_scope:'firebase_identity',prior_attempts:[{approval_id:'b'.repeat(64),action:'managed_users.issue_session',phase:'unknown',attempted_at:1,custom_token_expires_at:3600001}]},
+ managed_session_execution:status==='pending'?null:{phase:status==='completed'?(issue?'issued':'revoked'):status==='unknown'?'unknown':'attempting',attempted_at:1,custom_token_expires_at:expires,delivery:issue?'not_observable':'none'},
+ receipt:status==='completed'?{keys:[],revoked_count:0,membership:null,invitation:null,managed_identity:null,managed_session:{user_id:'managed_user',approval_id:id,action,custom_token_expires_at:expires,session_expiration:'not_bounded_by_custom_token',revocation_scope:issue?null:'refresh_tokens_only'}}:null};
+}
+test('session issue/revoke and legacy login alias only prepare a stable owner approval',async t=>{
+ for(const [command,action] of [['issue-session','managed_users.issue_session'],['login-link','managed_users.issue_session'],['revoke-sessions','managed_users.revoke_sessions']]){
+  const f=await fixture(t,()=>({data:sessionApproval(action)}));
+  for(let i=0;i<2;i++){const r=await f.run(['users',command,'managed_user','--operation-id',operation,'--team','team_b','--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.match(json(r).next_step,/Preparation issues no session/);}
+  assert.equal(f.requests.length,2);for(const req of f.requests){assert.equal(req.method,'POST');assert.equal(new URL(req.url,f.base).pathname,'/v2/users/me/account-approvals');assert.deepEqual(JSON.parse(req.body),{operation_id:operation,action,team_id:'team_b',payload:{user_id:'managed_user'}});}
+ }
+});
+test('session status and receipt stay truthful and never forward nested bearer fields',async t=>{
+ for(const action of ['managed_users.issue_session','managed_users.revoke_sessions'])for(const status of ['pending','processing','unknown','completed']){
+  const data=sessionApproval(action,status);data.secrets={managed_session:{custom_token:'synthetic-secret'}};data.managed_session_change.custom_token='synthetic-secret';data.managed_session_change.teams[0].token='synthetic-secret';data.managed_session_change.prior_attempts[0].token='synthetic-secret';if(data.receipt)data.receipt.managed_session.token='synthetic-secret';
+  const f=await fixture(t,()=>({data}));const r=await f.run(['account-approvals','get',id,'--json']);assert.equal(r.code,status==='unknown'?1:0,r.stdout+r.stderr);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret/);assert.equal(json(r).data.status,status);assert.match(json(r).next_step,status==='pending'?/owner/:/Unknown outcomes remain unknown/);assert.equal(f.requests.length,1);assert.equal(f.requests[0].method,'GET');
+ }
+});
+test('session preparation rejects old direct issuance arguments and inconsistent results without retries',async t=>{
+ const f=await fixture(t);for(const args of [['users','login-link','managed_user','--yes'],['users','issue-session','managed_user','--team','team_b'],['users','revoke-sessions','managed_user','--operation-id',operation],['users','issue-session','foreign/path','--operation-id',operation,'--team','team_b']])assert.equal((await f.run([...args,'--json'])).code,1);assert.equal(f.requests.length,0);
+ for(const modify of [d=>({...d,payload:{user_id:'other'}}),d=>({...d,managed_session_change:{...d.managed_session_change,billing_account_id:'other'}}),d=>({...d,receipt:{...d.receipt,managed_session:{...d.receipt.managed_session,session_expiration:'one_hour'}}}),d=>({...d,managed_session_execution:{...d.managed_session_execution,phase:'revoked'}})]){
+  const g=await fixture(t,()=>({data:modify(sessionApproval('managed_users.issue_session','completed'))}));const r=await g.run(['users','issue-session','managed_user','--operation-id',operation,'--team','team_b','--json']);assert.equal(r.code,1);assert.equal(g.requests.length,1);assert.match(r.stdout,RegExp(operation));
+ }
+ const g=await fixture(t,()=>({status:503,error:{message:'synthetic-secret'}}));const r=await g.run(['users','revoke-sessions','managed_user','--operation-id',operation,'--team','team_b','--json']);assert.equal(r.code,1);assert.equal(g.requests.length,1);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret/);
+});

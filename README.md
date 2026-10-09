@@ -681,7 +681,7 @@ gigstack users get user_456 --team team_123 --json
 gigstack users create --file managed-user.json --team team_123 --json
 gigstack users update user_456 --data '{"first_name":"Ana","company_role":"Contabilidad"}' --team team_123 --json
 gigstack users reset-password user_456 --team team_123 --json
-gigstack users login-link user_456 --team team_123 --yes --json
+gigstack users issue-session user_456 --team team_123 --operation-id SAVED_UUID --json
 gigstack users delete user_456 --team team_123 --yes --json
 gigstack webhooks get webhook_123 --team team_123 --json
 gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --team team_123 --json
@@ -690,10 +690,9 @@ gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --team team_
 `users create` accepts the v2 user fields: `email`, `first_name`, `last_name`,
 `phone`, `company_role`, `address`, `auto_join` and `role` (`admin`, `editor`,
 `viewer`). `users update` cannot change reserved email or membership fields.
-`reset-password` sends an email. `login-link` creates a credential that signs
-in as the target user and works only for API-created users managed exclusively
-by the caller's billing account, as checked by the server. Treat the returned
-link as a secret. User deletion follows the server's ownership/resource checks.
+`reset-password` sends an email. `issue-session` (also named `login-link` for
+compatibility) prepares an owner-reviewed session approval and returns no bearer.
+User deletion follows the server's ownership/resource checks.
 
 ### SAT credentials, request jobs and XML downloads
 
@@ -1168,10 +1167,37 @@ After `activation_required`, return there for a second review before membership 
 granted and Auth enabled. Preparation/reconciliation issue no credentials or email.
 Unknown outcomes exit nonzero and must not trigger another creation or activation;
 read evidence with `reconcile` and preserve the approval ID for operator recovery.
-The CLI has no review/execute/continue terminal. Existing managed session links,
-password-reset delivery and deletion still require the separate security migration.
+The CLI has no review/execute/continue terminal. Password-reset delivery and
+deletion still require the separate security migration.
 
 `users create` remains available for viewer/editor creation; `role:admin` points to
 `users create-admin`. If team and billing owners differ, create a nonadmin identity
 first, then use the existing owner-reviewed promotion. Direct nonadmin creation is
 not idempotent: preserve the returned reference after `managed_creation_unconfirmed`.
+
+### Managed session access and revocation
+
+```sh
+gigstack users issue-session USER_ID --team TEAM_ID --operation-id SAVED_UUID --json
+gigstack users revoke-sessions USER_ID --team TEAM_ID --operation-id DIFFERENT_SAVED_UUID --json
+gigstack account-approvals get APPROVAL_ID --json
+```
+
+Both commands prepare an action for the current owner to review at `review_url`.
+They require a personal credential and complete current authority over the managed
+identity's reachable teams and billing account. Preparation neither issues a
+session nor revokes one. The review discloses the full Firebase identity, both
+modes, connected master-team grants, and prior issued/unknown attempts.
+
+Only the first successful browser execution may deliver a custom-token handoff,
+for deliberate use in a separate private browser context. No token or login link
+is returned by CLI. `users login-link` is a preparation alias and now requires
+`--operation-id`; the old direct mint request is not used.
+
+The custom-token deadline limits exchange, not the life of a redeemed session.
+Revocation affects refresh tokens across devices; it does not cancel outstanding
+custom tokens or guarantee immediate refusal by ID-token consumers that do not
+check revocation. Unknown outcomes exit nonzero and stay unknown. Preserve the
+approval ID, read its metadata, and never automatically repeat issuance/revocation.
+Backend configuration and its complete-grant indexing gate must be satisfied
+before rollout; this adapter does not establish production readiness.

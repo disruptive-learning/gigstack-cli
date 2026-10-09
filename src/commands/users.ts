@@ -1,5 +1,5 @@
 import { managedInput } from '../managed-identity-contract.js';
-import { approvalTeam, prepareApproval } from '../account-approvals.js';
+import { approvalTeam, prepareApproval, membershipTarget } from '../account-approvals.js';
 import { Command } from "commander";
 import { api } from "../api.js";
 import { withListOpts, buildListQuery } from "../list-opts.js";
@@ -28,13 +28,14 @@ export function registerUserCommands(program: Command) {
     .action(async (id, opts) => show(await api("PUT", `/users/${segment(id)}`, { body: await readJsonInput(opts) })));
   users.command("reset-password <id>").description("Enviar correo de restablecimiento al usuario; requiere admin")
     .action(async id => show(await api("POST", `/users/reset-password/${segment(id)}`, { body: {} })));
-  users.command("login-link <id>").description("Generar acceso para un usuario API administrado exclusivamente por esta cuenta; salida sensible")
-    .option("-y, --yes", "Confirmar creación del enlace de acceso")
-    .action(async (id, opts) => {
-      segment(id);
-      await requireConfirmation(opts.yes, `¿Crear un enlace que inicia sesión como el usuario administrado ${id}?`);
-      show(await api("POST", "/users/login-link", { body: { user_id: id } }));
-    });
+  users.command("issue-session <id>").alias("login-link")
+    .description("Prepare owner-reviewed managed session access; no bearer or login link is returned to CLI")
+    .requiredOption("--operation-id <uuid>", "Persisted UUIDv4 for this exact session intent")
+    .action(async (id, opts) => prepareApproval(opts.operationId, "managed_users.issue_session", approvalTeam(), { user_id: membershipTarget(id) }));
+  users.command("revoke-sessions <id>")
+    .description("Prepare owner-reviewed refresh-token revocation; existing custom tokens may still be exchanged")
+    .requiredOption("--operation-id <uuid>", "Persisted UUIDv4 for this exact revocation intent")
+    .action(async (id, opts) => prepareApproval(opts.operationId, "managed_users.revoke_sessions", approvalTeam(), { user_id: membershipTarget(id) }));
   users.command("delete <id>").description("Eliminar usuario administrado según las restricciones del servidor")
     .option("-y, --yes", "Confirmar eliminación del usuario")
     .action(async (id, opts) => {
