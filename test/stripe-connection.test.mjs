@@ -157,3 +157,9 @@ test("actual CLI cancel and local disconnect send finite bodies and never claim 
     "not_performed",
   );
 });
+
+test("published Stripe adapter contract contains only public requests", async () => {
+  const fs = await import("node:fs/promises");
+  const contract = JSON.parse(await fs.readFile(new URL("../src/contracts/stripe-connection-request.schema.json", import.meta.url), "utf8"));
+  assert.deepEqual(Object.keys(contract), ["create", "disconnect", "terminal"]);
+});
