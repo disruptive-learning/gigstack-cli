@@ -1446,3 +1446,16 @@ team/user administration and credential lifecycle are not grantable. Client writ
 can trigger downstream Stripe/fiscal effects whose scope proof is not yet covered.
 Unknown/unreviewed routes return `scoped_action_unavailable`; existing legacy
 credentials retain their existing behavior. Use the policy catalog's exact IDs.
+
+The current personal billing owner can explicitly revoke account-scoped keys across
+**both** live/test modes. Delegates/managers/API keys cannot use this operation;
+legacy keys, MCP and OAuth remain untouched:
+
+```bash
+gigstack scoped-api-keys emergency-revoke --billing-account ACCOUNT_ID --operation-id SAVED_UUIDV4 --yes --json
+gigstack scoped-api-keys emergency-get SAVED_UUIDV4 --billing-account ACCOUNT_ID --json
+```
+
+`processing` and `revoked_count` mean partial work. GET is read-only. After an
+uncertain response inspect that saved UUID, then repeat POST with the same UUID only
+to deliberately resume. Never automatically create a fresh operation UUID.
