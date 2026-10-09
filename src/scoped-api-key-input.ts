@@ -13,9 +13,11 @@ function ids(value: unknown, action = false, allowEmpty = false): string[] {
   return [...value].sort();
 }
 export function scopedCreatePayload(value: Record<string, unknown>) {
-  fields(value, ['name','livemode','billing_account_id','team_ids','action_ids','expires_at','manager_user_ids']);
-  if (typeof value.name !== 'string' || !value.name.trim() || value.name.trim().length > 64 || typeof value.livemode !== 'boolean' || !Number.isSafeInteger(value.expires_at) || (value.expires_at as number) <= 0) throw new Error('Nombre, modo explícito y expires_at en milisegundos requeridos');
-  return { name:value.name.trim(),livemode:value.livemode,billing_account_id:scopedIdentity(value.billing_account_id),team_ids:ids(value.team_ids),action_ids:ids(value.action_ids,true),expires_at:value.expires_at as number,manager_user_ids:ids(value.manager_user_ids,false,true) };
+  // expires_at may be omitted or null (no expiration, billing owners only); the server enforces who may do that.
+  const { expires_at = null, ...rest } = value;
+  fields(rest, ['name','livemode','billing_account_id','team_ids','action_ids','manager_user_ids']);
+  if (typeof value.name !== 'string' || !value.name.trim() || value.name.trim().length > 64 || typeof value.livemode !== 'boolean' || (expires_at !== null && (!Number.isSafeInteger(expires_at) || (expires_at as number) <= 0))) throw new Error('Nombre y modo explícito requeridos; expires_at en milisegundos o null para sin vencimiento');
+  return { name:value.name.trim(),livemode:value.livemode,billing_account_id:scopedIdentity(value.billing_account_id),team_ids:ids(value.team_ids),action_ids:ids(value.action_ids,true),expires_at:expires_at as number | null,manager_user_ids:ids(value.manager_user_ids,false,true) };
 }
 export function scopedRotatePayload(value: Record<string, unknown>) {
   fields(value,['key_id','overlap_seconds']);

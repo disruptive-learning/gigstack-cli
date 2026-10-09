@@ -1426,10 +1426,12 @@ gigstack scoped-api-keys revoke KEY_ID --billing-account BILLING_ACCOUNT_ID --op
 ```
 
 The create file contains exactly `name`, `livemode` (boolean), `billing_account_id`,
-`team_ids`, `action_ids`, `expires_at` (epoch milliseconds), and `manager_user_ids`
-(an empty array delegates no extra managers). Copy exact allowed action IDs from
-`policy`; do not use wildcards. Expiry is required, at most 365 days and subject to
-any shorter server policy. List/audit support `--limit` and `--cursor`; keep reading
+`team_ids`, `action_ids`, `manager_user_ids` (an empty array delegates no extra
+managers) and, optionally, `expires_at` (epoch milliseconds). Copy exact allowed
+action IDs from `policy`; do not use wildcards. Billing owners may omit `expires_at`
+or set it to `null` for a key with no expiration; delegated administrators must set a
+future expiry. A chosen expiry is at most 365 days and subject to any shorter server
+policy. Rotation keeps the original expiry choice. List/audit support `--limit` and `--cursor`; keep reading
 while `next_cursor` is non-null, including empty pages.
 
 Preparation returns `review_url` and safe scope. The initiating person must review
