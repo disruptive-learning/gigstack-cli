@@ -134,3 +134,7 @@ test("actual CLI mutation preserves UUID/mode/scope and uncertain writes are not
   assert.notEqual(forged.code, 0);
   assert.equal(requests.length, 1);
 });
+test('actual CLI reads canonical nonempty reminder state and excludes private provider/recipient fields',async(t)=>{
+ const config={ payment_id:'pay1',team_id:'t',livemode:false,revision:'a'.repeat(64),status:'pending',effect_scope:'payment_mode_reminders',legacy_defaults_eligible:false,blocking_operation_id:null,limitDaysToPay:3,limitDateToPay:123,recipient:'PRIVATE',reminders:[{ id:'rem1',type:'default',when:'before',duration:2,periodicity:'week',custom_subject:null,custom_template:null,generation:'a'.repeat(64),exec_timestamp:123,sent:false,reminder_sended:0,last_runned:null,last_execution:null,queue_state:'confirmed',next_wakeup_at:123,active_occurrence:null,provider_error:'PRIVATE' }] };
+ const {run,requests}=await fixture(t,()=>({success:true,data:config}));const read=await run(['payment-reminders','get','t','pay1']);assert.equal(read.code,0,read.stderr);assert.doesNotMatch(read.stdout,/PRIVATE/);const data=JSON.parse(read.stdout).data;assert.equal(data.reminders[0].duration,2);assert.equal(requests.length,1);
+})
