@@ -1,3 +1,4 @@
+import { registerVendorCommands } from "./commands/vendors.js";
 import { registerPaymentLinkCommands } from "./commands/payment-links.js";
 import { registerAccountInvitationCommands } from "./commands/account-invitations.js";
 import { Command } from "commander";
@@ -62,6 +63,7 @@ registerClientCommands(program);
 registerInvoiceCommands(program);
 registerPaymentCommands(program);
 registerPaymentLinkCommands(program);
+registerVendorCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
