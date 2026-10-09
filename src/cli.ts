@@ -1,3 +1,4 @@
+import { registerPaymentReminderCommands } from "./commands/payment-reminders.js";
 import { registerVendorCommands } from "./commands/vendors.js";
 import { registerPaymentLinkCommands } from "./commands/payment-links.js";
 import { registerAccountInvitationCommands } from "./commands/account-invitations.js";
@@ -64,6 +65,7 @@ registerInvoiceCommands(program);
 registerPaymentCommands(program);
 registerPaymentLinkCommands(program);
 registerVendorCommands(program);
+registerPaymentReminderCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);

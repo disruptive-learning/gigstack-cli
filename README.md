@@ -1343,3 +1343,11 @@ validated current runtime project and exact invoice/files-document path; current
 credential/authority and document/files snapshots are checked after asynchronous reads.
 Missing files are truthful unavailability. Neither command generates files, mints tokens,
 writes Storage metadata, calls payment/fiscal providers or automatically retries.
+
+### Individual payment reminders
+
+`payment-reminders get <teamId> <paymentId>` reads the current full configuration and revision. Use `payment-reminders schema configure` for the JSON accepted by `replace`; save a UUIDv4 `operation_id` before sending. The CLI derives `expected_livemode` from the selected credential; a credential without a mode requires `--expected-mode live|test` as an assertion for the server to verify.
+
+After an uncertain response, use `operation`, `reconcile` or `continue` with the same team, payment and UUID. Reconciliation only reads task state; continuation only consumes untouched steps. Missing tasks do not prove no email. Use `prepare-recovery --stdin` for a new reviewed superseding proposal and open its `review_url` in the private browser. Fresh Firebase sign-in, explicit duplicate-email acknowledgement and no active send claim are required there; the CLI has no reviewer challenge or execution command.
+
+Removing all individual reminders can enable team defaults. Test mode in production can send real emails. A saved configuration or accepted provider result does not prove email delivery. This surface is implemented in source; it does not establish deployment or live-provider verification.
