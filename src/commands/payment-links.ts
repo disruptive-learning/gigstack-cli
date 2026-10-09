@@ -1,4 +1,8 @@
-import { safeHistoricalDocument } from "../payment-link-history.js";
+import { writeFileSync } from "node:fs";
+import {
+  safeHistoricalDocument,
+  safeHistoricalFile,
+} from "../payment-link-history.js";
 import { runtimeOptions } from "../runtime.js";
 import { getTeamFromKey } from "../config.js";
 import { Command } from "commander";
@@ -115,6 +119,55 @@ export function registerPaymentLinkCommands(program: Command) {
       );
       printJson({
         data: safeHistoricalDocument(r.data, team, mode, kind, resourceId),
+      });
+    });
+  links
+    .command("history-file <id> <resourceType> <resourceId> <fileType>")
+    .description(
+      "Download an existing authorized historical PDF/XML; never generates files or mints tokens",
+    )
+    .requiredOption(
+      "--output <path>",
+      "Destination artifact path (existing files are preserved)",
+    )
+    .option("--expected-mode <mode>", "live|test")
+    .action(async (id, kind, resourceId, fileType, opts) => {
+      if (
+        !["invoices", "receipts"].includes(kind) ||
+        !["pdf", "xml"].includes(fileType) ||
+        !/^[A-Za-z0-9_-]{1,160}$/.test(resourceId)
+      )
+        throw new Error("Historical file identifier invalid");
+      const team = target(),
+        mode = credentialMode(opts.expectedMode);
+      const response = await api(
+        "GET",
+        `${path(id)}/history/${segment(kind)}/${segment(resourceId)}/files/${segment(fileType)}`,
+        { team },
+      );
+      const result = safeHistoricalFile(
+        response.data,
+        team,
+        mode,
+        kind,
+        resourceId,
+        fileType as "pdf" | "xml",
+      );
+      if (!result.file)
+        throw new Error(
+          "Historical file unavailable; no generation or retry occurred",
+        );
+      const bytes = Buffer.from(result.file.content, "base64");
+      writeFileSync(opts.output, bytes, { flag: "wx" });
+      const { content: _content, ...metadata } = result.file;
+      printJson({
+        resource_type: kind,
+        resource_id: resourceId,
+        team_id: team,
+        livemode: mode,
+        storage_project_id: result.storage_project_id,
+        available: true,
+        file: { ...metadata, output: opts.output },
       });
     });
   links

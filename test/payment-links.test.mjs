@@ -1,3 +1,6 @@
+import { readFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "node:http";
@@ -297,6 +300,8 @@ test("history command reads exact independently scoped document and strips priva
     resource_id: "invoice_one",
     team_id: "t",
     livemode: false,
+    storage_project_id: "gigstackprodev",
+    file_status: { pdf: "unavailable", xml: "unavailable" },
     document: {
       id: "invoice_one",
       team: "t",
@@ -342,4 +347,76 @@ test("history command reads exact independently scoped document and strips priva
   ]);
   assert.notEqual(invalid.code, 0);
   assert.equal(requests.length, before);
+});
+
+test("historical reads retain all real emitted public invoice and receipt fields", async (t) => {
+  const fixtures = JSON.parse(
+    readFileSync(
+      new URL("./history-response.fixture.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  let data;
+  const { run } = await fixture(t, () => ({ success: true, data }));
+  for (const saved of fixtures) {
+    data = {
+      ...saved,
+      team_id: "t",
+      document: { ...saved.document, team: "t" },
+    };
+    const result = await run([
+      "payment-links",
+      "history",
+      "plink_saved",
+      data.resource_type,
+      data.resource_id,
+    ]);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).data, data);
+  }
+});
+test("historical file command writes verified existing bytes and never overwrites an existing artifact", async (t) => {
+  const content = Buffer.from("%PDF existing").toString("base64");
+  const data = {
+    resource_type: "invoices",
+    resource_id: "invoice_one",
+    team_id: "t",
+    livemode: false,
+    storage_project_id: "gigstackprodev",
+    available: true,
+    file: {
+      kind: "pdf",
+      filename: "invoice_one.pdf",
+      type: "application/pdf",
+      content,
+      size_bytes: 13,
+    },
+  };
+  const { run, requests } = await fixture(t, () => ({ success: true, data }));
+  const output = join(
+    mkdtempSync(join(tmpdir(), "gigstack-history-file-")),
+    "invoice.pdf",
+  );
+  const args = [
+    "payment-links",
+    "history-file",
+    "plink_saved",
+    "invoices",
+    "invoice_one",
+    "pdf",
+    "--output",
+    output,
+  ];
+  const result = await run(args);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(readFileSync(output, "utf8"), "%PDF existing");
+  assert.equal(result.stdout.includes(content), false);
+  assert.match(requests[0].url, /\/history\/invoices\/invoice_one\/files\/pdf/);
+  assert.equal(requests[0].method, "GET");
+  const repeat = await run(args);
+  assert.notEqual(repeat.code, 0);
+  assert.equal(readFileSync(output, "utf8"), "%PDF existing");
+  data.file.filename = "foreign.pdf";
+  const wrong = await run([...args.slice(0, -1), output + ".wrong"]);
+  assert.notEqual(wrong.code, 0);
 });

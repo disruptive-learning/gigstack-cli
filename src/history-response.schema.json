@@ -1,0 +1,3999 @@
+{
+  "invoiceDocument": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "client": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 3
+              },
+              "street": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "zip": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exterior": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interior": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "municipality": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "neighborhood": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bcc": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "is_valid": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "legal_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "livemode": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "use": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_system": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "efos": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "is_valid": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "fiscal_validation": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sat_status": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "is_risky": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "efos": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "is_valid": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "hits": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "list": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "source": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "is_risky": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "detail": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "checked_at": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "defaults": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "keep_full_legal_name": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "issue_automatic_invoices": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "issue_invoiceable_receipts": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "document_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "organization_type": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "tribute_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fiscal_responsibilities": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "dv": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "municipality_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "created_at": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "currency": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "exchange_rate": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "total": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "subtotal": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "taxes": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "discount": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "withholding_taxes": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "series": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "folio_number": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "invoice_type": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "use": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payment_form": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payment_method": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "status": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "livemode": {
+        "type": "boolean"
+      },
+      "owner": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "from": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "items": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "product_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unit_price": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unit_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "unit_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sku": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "taxability": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "taxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "base": {
+                    "type": [
+                      "number",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "rate": {
+                    "type": [
+                      "number",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "discount": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "customs_request": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "complement": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "property_tax_account": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "third_party": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "legal_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_system": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "zip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "payments": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "invoices": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "stamp": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "sello": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stamp_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "cancellation": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "cancellation_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancelled_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "motive": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requested_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancellation_receipt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancellation_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_checked": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "requested_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "substitution_uuid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "verification_url": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "exports": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "addenda": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "invoice_pdf_notes": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "files": {
+        "type": "object",
+        "properties": {
+          "pdf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "xml": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pdf",
+          "xml"
+        ]
+      },
+      "idempotency_key": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "team": {
+        "type": "string"
+      },
+      "billing_account": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "date": {
+        "type": [
+          "integer",
+          "null"
+        ]
+      },
+      "payment_conditions": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "global": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "periodicity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "months": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "year": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "related_documents": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "relationship": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "documents": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "complements": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "data": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "metadata": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      },
+      "emails": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "issuer_info": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "legal_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_system": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "zip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "namespaces": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "prefix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "uri": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "schema_location": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,160}$"
+      },
+      "payment_complements": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "last_balance": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "installments": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "automations": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "team",
+      "livemode",
+      "files"
+    ]
+  },
+  "receiptDocument": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "client": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 3
+              },
+              "street": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "zip": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exterior": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interior": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "municipality": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "neighborhood": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bcc": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "is_valid": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "legal_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "livemode": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "use": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_system": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "efos": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "is_valid": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "fiscal_validation": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sat_status": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "is_risky": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "efos": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "is_valid": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "hits": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "list": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "source": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "is_risky": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "detail": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "checked_at": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "defaults": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "keep_full_legal_name": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "issue_automatic_invoices": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "issue_invoiceable_receipts": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "document_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "organization_type": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "tribute_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fiscal_responsibilities": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "dv": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "municipality_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "currency": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "exchange_rate": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "from": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "url": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "created_at": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "invoices": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string"
+        }
+      },
+      "items": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sku": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "product_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "unit_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "unit_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "unit_price": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "taxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "base": {
+                    "type": [
+                      "number",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "rate": {
+                    "type": [
+                      "number",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "team": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "created_at": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "discount": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "third_party": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "legal_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_system": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "zip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "item_complement": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "hydrocarbons": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "permit_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "permit_number": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fuel_code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fuel_sub_product": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "livemode": {
+        "type": "boolean"
+      },
+      "metadata": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      },
+      "owner": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payments": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string"
+        }
+      },
+      "periodicity": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "short_url": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "status": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "team": {
+        "type": "string"
+      },
+      "valid_until": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "invoice_config": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "serie": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folio": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "global": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "periodicity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "months": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "year": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "validUntil": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "automatic_invoice_error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payment_form": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "files": {
+        "type": "object",
+        "properties": {
+          "pdf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "xml": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pdf",
+          "xml"
+        ]
+      },
+      "total": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "total_refunded": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "subtotal": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "taxes": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "discount": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "withholding_taxes": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "idempotency_key": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "team",
+      "livemode",
+      "files"
+    ]
+  },
+  "historyEnvelope": {
+    "type": "object",
+    "properties": {
+      "resource_type": {
+        "type": "string",
+        "enum": [
+          "invoices",
+          "receipts"
+        ]
+      },
+      "resource_id": {
+        "type": "string"
+      },
+      "team_id": {
+        "type": "string"
+      },
+      "livemode": {
+        "type": "boolean"
+      },
+      "storage_project_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{4,62}$"
+      },
+      "document": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "uuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "address": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "country": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 3
+                      },
+                      "street": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "zip": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "city": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "state": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "exterior": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "interior": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "municipality": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "neighborhood": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "company": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "bcc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "metadata": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "is_valid": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "from": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "legal_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "livemode": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "owner": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "use": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_system": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "team": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "created_at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "efos": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "is_valid": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "fiscal_validation": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "message": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "sat_status": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "is_risky": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "efos": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "is_valid": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "hits": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "list": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "label": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "source": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "is_risky": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "detail": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "additionalProperties": true
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "checked_at": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "defaults": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "keep_full_legal_name": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "issue_automatic_invoices": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "issue_invoiceable_receipts": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "document_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "organization_type": {
+                    "type": [
+                      "integer",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tribute_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "fiscal_responsibilities": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "dv": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "municipality_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "created_at": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "currency": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exchange_rate": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "subtotal": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "taxes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "discount": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "withholding_taxes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "series": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "folio_number": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "invoice_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "use": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "payment_form": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "payment_method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "livemode": {
+                "type": "boolean"
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "items": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "product_key": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "quantity": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "unit_price": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "unit_key": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "unit_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "sku": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "taxability": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "taxes": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "base": {
+                            "type": [
+                              "number",
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "rate": {
+                            "type": [
+                              "number",
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "factor": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "inclusive": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "withholding": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "discount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "customs_request": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "complement": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "property_tax_account": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "third_party": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "legal_name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tax_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tax_system": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "zip": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "payments": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "invoices": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "stamp": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "sello": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "stamp_at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "provider": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "cancellation": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "cancellation_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "cancelled_at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "motive": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "requested_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "cancellation_receipt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "cancellation_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "last_checked": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "requested_at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "substitution_uuid": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "verification_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exports": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "addenda": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "invoice_pdf_notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "files": {
+                "type": "object",
+                "properties": {
+                  "pdf": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "xml": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "pdf",
+                  "xml"
+                ]
+              },
+              "idempotency_key": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "team": {
+                "type": "string"
+              },
+              "billing_account": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "date": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "payment_conditions": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "global": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "periodicity": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "months": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "year": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "related_documents": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "relationship": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "documents": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "complements": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "data": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "emails": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "issuer_info": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "legal_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_system": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "zip": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "namespaces": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "prefix": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "uri": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "schema_location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,160}$"
+              },
+              "payment_complements": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "last_balance": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "installments": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "automations": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "ref": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "action": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "team",
+              "livemode",
+              "files"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "client": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "address": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "country": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 3
+                      },
+                      "street": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "zip": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "city": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "state": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "exterior": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "interior": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "municipality": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "neighborhood": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "company": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "bcc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "metadata": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "is_valid": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "from": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "legal_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "livemode": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "owner": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "use": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tax_system": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "team": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "created_at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "efos": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "is_valid": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "fiscal_validation": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "message": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "sat_status": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "is_risky": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "efos": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "is_valid": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "hits": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "list": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "label": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "source": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "is_risky": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "detail": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "additionalProperties": true
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "checked_at": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "defaults": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "keep_full_legal_name": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "issue_automatic_invoices": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "issue_invoiceable_receipts": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "document_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "organization_type": {
+                    "type": [
+                      "integer",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tribute_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "fiscal_responsibilities": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "dv": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "municipality_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "currency": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exchange_rate": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "invoices": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "items": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "sku": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "product_key": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "unit_key": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "unit_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "unit_price": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "taxes": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "base": {
+                            "type": [
+                              "number",
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "rate": {
+                            "type": [
+                              "number",
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "factor": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "inclusive": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "withholding": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "team": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "created_at": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "quantity": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "discount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "third_party": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "legal_name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tax_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tax_system": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "zip": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "item_complement": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "hydrocarbons": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "permit_type": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "permit_number": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "fuel_code": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "fuel_sub_product": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "livemode": {
+                "type": "boolean"
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "payments": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "periodicity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "short_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "team": {
+                "type": "string"
+              },
+              "valid_until": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "invoice_config": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "serie": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "folio": {
+                    "type": [
+                      "number",
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "date": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "global": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "periodicity": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "months": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "year": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "validUntil": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "automatic_invoice_error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "payment_form": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "files": {
+                "type": "object",
+                "properties": {
+                  "pdf": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "xml": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "pdf",
+                  "xml"
+                ]
+              },
+              "total": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "total_refunded": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "subtotal": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "taxes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "discount": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "withholding_taxes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "idempotency_key": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "team",
+              "livemode",
+              "files"
+            ]
+          }
+        ]
+      },
+      "file_status": {
+        "type": "object",
+        "properties": {
+          "pdf": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "xml": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pdf",
+          "xml"
+        ]
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "resource_type",
+      "resource_id",
+      "team_id",
+      "livemode",
+      "storage_project_id",
+      "document",
+      "file_status"
+    ]
+  },
+  "fileEnvelope": {
+    "type": "object",
+    "properties": {
+      "resource_type": {
+        "type": "string",
+        "enum": [
+          "invoices",
+          "receipts"
+        ]
+      },
+      "resource_id": {
+        "type": "string"
+      },
+      "team_id": {
+        "type": "string"
+      },
+      "livemode": {
+        "type": "boolean"
+      },
+      "storage_project_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{4,62}$"
+      },
+      "available": {
+        "type": "boolean"
+      },
+      "file": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "pdf",
+                  "xml"
+                ]
+              },
+              "filename": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "application/pdf",
+                  "application/xml"
+                ]
+              },
+              "content": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "filename",
+              "type",
+              "content",
+              "size_bytes"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "resource_type",
+      "resource_id",
+      "team_id",
+      "livemode",
+      "storage_project_id",
+      "available",
+      "file"
+    ]
+  }
+}

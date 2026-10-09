@@ -1329,8 +1329,17 @@ The response preserves the eight exact `legacy_templates` too, with a distinct s
 
 Read a current authorized historical document with
 `gigstack payment-links history <linkId> <invoices|receipts> <resourceId> --team <team>`.
-The exact saved ID, current link, target module viewing permission, team and credential
-mode are independently verified. Nested IDs remain hints. Only supported public fields
-and safe already-stored PDF/XML URLs are returned. This command performs one GET,
-without document generation, file token minting, Storage writes or provider calls.
-Canonical invoice file subcollections are not downloaded by this resolver.
+It preserves the complete mapped public invoice/receipt DTO and nested fiscal fields,
+using the same canonical closed schema as the API/browser/MCP. Current original
+credential, link, target viewing permission, team and mode are independently verified;
+saved and nested IDs alone grant no access. Ordinary history never contains inline bytes.
+
+Download an existing canonical inline or offloaded file with
+`gigstack payment-links history-file <linkId> <invoices|receipts> <resourceId> <pdf|xml> --output <path>`.
+Filename, MIME type, byte shape and current resource scope are validated before writing a
+new local artifact; existing destinations are preserved. JSON output contains file
+metadata and the destination, rather than base64. Storage reads are constrained to the
+validated current runtime project and exact invoice/files-document path; current
+credential/authority and document/files snapshots are checked after asynchronous reads.
+Missing files are truthful unavailability. Neither command generates files, mints tokens,
+writes Storage metadata, calls payment/fiscal providers or automatically retries.
