@@ -22,7 +22,7 @@ async function fixture(t, responder = () => ({ data: { id: 'team_b', settings: {
   const base = `http://127.0.0.1:${server.address().port}/v2`;
   function run(args, opts = {}) {
     return new Promise((resolve, reject) => {
-      const env = { ...process.env, GIGSTACK_API_KEY: 'synthetic-test-token', GIGSTACK_API_BASE_URL: base, GIGSTACK_TEAM: '', ...opts.env };
+      const env = { ...process.env, GIGSTACK_API_KEY: `fixture.${Buffer.from(JSON.stringify({livemode:false})).toString('base64url')}.synthetic`, GIGSTACK_API_BASE_URL: base, GIGSTACK_TEAM: '', ...opts.env };
       const child = spawn(process.execPath, [cli, ...args], { env, stdio: ['pipe', 'pipe', 'pipe'] });
       let stdout = '', stderr = '';
       child.stdout.on('data', d => stdout += d); child.stderr.on('data', d => stderr += d);
@@ -39,10 +39,10 @@ test('provider setup maps four named actions and preserves browser handoff and s
  const state={id:'session_1',provider:'airtable',status:'pending',effect_scope:'team_shared_credentials',completion_url:'https://app.example.test/account/integrations/connect/session_1?team=team_b',disclosures:['Shared connection'],result:null};
  const f=await fixture(t,()=>({data:state}));
  for(const provider of ['airtable','mercadolibre','netsuite','zettle']) {
-  const r=await f.run(['integrations','setup','create','team_b','--provider',provider,'--yes','--json']);assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r).data,state);assert.equal(f.requests.at(-1).url,'/v2/teams/team_b/integration-connection-sessions');assert.deepEqual(JSON.parse(f.requests.at(-1).body),{provider});
+  const r=await f.run(['integrations','setup','create','team_b','--provider',provider,'--yes','--json']);assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r).data,state);assert.equal(f.requests.at(-1).url,'/v2/teams/team_b/integration-connection-sessions?team=team_b');assert.deepEqual(JSON.parse(f.requests.at(-1).body),{provider,...(provider==='airtable'?{expected_livemode:false}:{})});
  }
  for(const [action,method,suffix] of [['get','GET',''],['cancel','DELETE',''],['reconcile','POST','/reconcile']]) {
-  const r=await f.run(['integrations','setup',action,'team_b','session_1',...(action==='cancel'?['--yes']:[]),'--json']);assert.equal(r.code,0,r.stderr);assert.equal(json(r).data.status,'pending');const req=f.requests.at(-1);assert.equal(req.method,method);assert.equal(req.url,`/v2/teams/team_b/integration-connection-sessions/session_1${suffix}`);if(method!=='GET')assert.deepEqual(JSON.parse(req.body),{});
+  const r=await f.run(['integrations','setup',action,'team_b','session_1',...(action==='cancel'?['--yes']:[]),'--json']);assert.equal(r.code,0,r.stderr);assert.equal(json(r).data.status,'pending');const req=f.requests.at(-1);assert.equal(req.method,method);assert.equal(req.url,`/v2/teams/team_b/integration-connection-sessions/session_1${suffix}?team=team_b`);if(method!=='GET')assert.deepEqual(JSON.parse(req.body),{});
  }
 });
 test('setup rejects unsupported providers, credential arguments, mismatched teams and absent confirmation before network', async t=>{
@@ -62,5 +62,5 @@ test('setup unknown and failure return nonzero without replay or losing exact se
  let status='outcome_unknown';const f=await fixture(t,()=>({data:{id:'s',status,result:{connected:false,credentials_may_be_stored:true},error:{code:'provider_result_unknown',message:'Unknown'}}}));
  for(const action of ['get','reconcile']){const r=await f.run(['integrations','setup',action,'team_b','s','--json']);assert.equal(r.code,1);assert.equal(json(r).data.status,status);assert.equal(json(r).data.result.credentials_may_be_stored,true)}
  status='failed';assert.equal((await f.run(['integrations','setup','get','team_b','s','--json'])).code,1);
- assert.equal(f.requests.length,3);assert.equal(f.requests.filter(req=>req.method==='POST'&&!req.url.endsWith('/reconcile')).length,0);
+ assert.equal(f.requests.length,3);assert.equal(f.requests.filter(req=>req.method==='POST'&&!new URL(req.url,'http://fixture').pathname.endsWith('/reconcile')).length,0);
 });

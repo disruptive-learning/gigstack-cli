@@ -1201,3 +1201,40 @@ check revocation. Unknown outcomes exit nonzero and stay unknown. Preserve the
 approval ID, read its metadata, and never automatically repeat issuance/revocation.
 Backend configuration and its complete-grant indexing gate must be satisfied
 before rollout; this adapter does not establish production readiness.
+
+### Airtable: conexión compartida e importaciones por modo
+
+`integrations airtable` ofrece `bases`, `tables`, `webhooks list|remote|register|unregister`,
+`disconnect` y `operations get|reconcile`. Requiere usuario personal Firebase/MCP; una
+clave de equipo no representa a su creador. Airtable siempre es el proveedor real: el modo
+prueba distingue los registros importados, no otra cuenta externa. `webhooks list --scope
+shared` muestra explícitamente ambos modos y registros antiguos con autoridad de configuración.
+Sigue `next_cursor` cuando `has_more` sea verdadero, incluso si `data` está vacío.
+
+Las escrituras reciben JSON con `operation_id` UUIDv4 estable y `confirmed:true`, además de
+`--yes` o confirmación interactiva. No se genera un UUID nuevo automáticamente. Consulta
+`integrations airtable schema register|unregister|disconnect` para el cuerpo completo;
+`disconnect` exige `acknowledge_shared_connection:true` y puede requerir continuaciones
+explícitas con el mismo UUID e idéntico cuerpo. Una respuesta incierta/parcial conserva el
+recibo y termina con código 1. `operations reconcile` consulta evidencia, sin repetir
+creaciones ni borrados remotos. No confunde `processing` con finalización.
+
+El modo se deriva del JWT seleccionado y se envía como afirmación `expected_livemode`,
+nunca como cambio de modo. Para credenciales sin ese campo, proporciona `--expected-mode
+live|test`; el servidor verifica su contexto. Una discrepancia se rechaza. No pongas
+`expected_livemode`, tokens o credenciales del proveedor en el JSON.
+
+La recuperación de un refresh incierto usa `integrations setup create <teamId> --provider
+airtable --recovery-operation-id <UUID-original> --acknowledge-unconfirmed-effects --yes`.
+Cada llamada confirmada desactiva hasta 100 suscripciones locales de ambos modos. Si el
+snapshot está incompleto, revisa el avance y confirma otra llamada; nunca hagas un bucle
+sin revisión. La persona creadora abre `completion_url`, revisa y autoriza en el navegador.
+OAuth completado puede devolver `connected:false`: restauró acceso limitado para inspección
+/limpieza, no las importaciones. Solo identidad verificada coincidente permite una nueva
+limpieza reconocida con UUID nuevo y `recovery_operation_id`; el resultado incierto original
+permanece. La conexión ordinaria posterior requiere nuevo consentimiento humano. No se
+aceptan ni imprimen MACs, secretos o tokens de Airtable. Una identidad anterior no verificable
+permanece explícitamente sin verificar.
+
+Estas funciones están implementadas y probadas sin llamadas a proveedores; consulta el estado
+de despliegue del backend antes de usarlas. No implican paridad completa de otros proveedores.
