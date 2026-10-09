@@ -212,6 +212,15 @@ test("retrying, teams events and safe delivery metadata survive without raw payl
   assert.equal(result.code, 0, result.stderr);
   assert.deepEqual(json(result).data, [row]);
   assert.ok(!result.stdout.includes("PRIVATE"));
+  for (const error_category of [
+    "endpoint_unavailable",
+    "credentials_unavailable",
+  ]) {
+    value = { ...row, response_code: null, latency_ms: 0, error_category };
+    const safe = await f.run(args);
+    assert.equal(safe.code, 0, safe.stderr);
+    assert.deepEqual(json(safe).data, [value]);
+  }
   for (const patch of [
     { resource_id: { secret: "PRIVATE" } },
     { attempts: -1 },

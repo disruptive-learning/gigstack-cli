@@ -10,6 +10,8 @@ export const deliveryStatuses = [
   "unknown",
 ];
 const errorCategories = [
+  "endpoint_unavailable",
+  "credentials_unavailable",
   "http_response",
   "network_or_timeout",
   "manual_authority_changed",
