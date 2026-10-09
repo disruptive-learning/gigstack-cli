@@ -24,7 +24,7 @@ export function registerClientCommands(program: Command) {
   registerSupportDocumentCommands(clients, "clients");
   clients.command("upload-csf").description("Create/update a client from a local CSF PDF; consults SAT fiscal details")
     .requiredOption("--file <path>", "Local CSF PDF, at most 5 MiB")
-    .option("--client <id>", "Existing client to update; omitted creates a client")
+    .option("--client <id>", "Shared team client to update across live/test workflows; omitted creates a client")
     .option("-y, --yes", "Confirm fiscal-data lookup and client save")
     .action(async opts => {
       if (opts.client !== undefined) segment(opts.client);
@@ -32,7 +32,9 @@ export function registerClientCommands(program: Command) {
       if (extname(opts.file).toLowerCase() !== ".pdf" || !info.isFile() || info.size < 5 || info.size > 5 * 1024 * 1024) throw new Error("CSF must be a local PDF up to 5 MiB");
       const bytes = await readFile(opts.file);
       if (bytes.length > 5 * 1024 * 1024 || bytes.subarray(0,5).toString() !== "%PDF-") throw new Error("Invalid or oversized CSF PDF");
-      await requireConfirmation(opts.yes, "Read SAT fiscal details and create/update this client in the selected team?");
+      await requireConfirmation(opts.yes, opts.client
+        ? "Read SAT fiscal details and update this shared team client used by live and sandbox workflows?"
+        : "Read SAT fiscal details and create this client in the selected team and credential mode?");
       const form = new FormData();
       form.append("file", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), basename(opts.file));
       printJson(await api("POST", "/clients/csf", { form, query: opts.client ? { client_id: opts.client } : {} }));
