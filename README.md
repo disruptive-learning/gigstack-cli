@@ -687,6 +687,13 @@ gigstack webhooks get webhook_123 --team team_123 --json
 gigstack webhooks update webhook_123 --data '{"status":"inactive"}' --team team_123 --json
 ```
 
+`users delete` removes accessible team memberships and retains the login and user
+profile. Inspect `removed_from_teams` for confirmed removals. `deleted: false`,
+`account_deleted: false` and `account_deletion.status: not_attempted` mean identity
+destruction did not happen. Complete identity deletion requires verified private
+custody, complete access evidence and separate reviewed approval; this command
+does not claim that capability.
+
 `users create` accepts the v2 user fields: `email`, `first_name`, `last_name`,
 `phone`, `company_role`, `address`, `auto_join` and `role` (`admin`, `editor`,
 `viewer`). `users update` cannot change reserved email or membership fields.

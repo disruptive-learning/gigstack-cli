@@ -625,3 +625,12 @@ test('checkout cancellation rejects reused UUID or absent confirmation locally, 
   assert.equal((await f.run(args)).code,1);const same=[...args];same[6]=original;assert.equal((await f.run([...same,'--yes'])).code,1);assert.equal(f.requests.length,0);await assert.rejects(stat(journal));
   const r=await f.run([...args,'--yes']);assert.equal(r.code,1);assert.equal(json(r).data.status,'outcome_unknown');assert.equal(json(r).operation_reference.id,billingUuid);assert.equal(f.requests.filter(q=>q.method==='POST').length,1);
 });
+
+test('user removal preserves the explicit identity-retained receipt', async t => {
+  const data={id:'user_a',deleted:false,account_deleted:false,removed_from_teams:['team_b'],account_deletion:{status:'not_attempted',requirement:'authoritative_scope_and_approval'}};
+  const f=await fixture(t,()=>({success:true,data}));
+  const r=await f.run(['users','delete','user_a','--team','team_b','--yes','--json']);
+  assert.equal(r.code,0,r.stderr);assert.deepEqual(json(r).data,data);assert.equal(f.requests.length,1);
+  const help=await f.run(['users','delete','--help']);
+  assert.match(help.stdout,/conserva/);assert.match(help.stdout,/no elimina la identidad/);
+});

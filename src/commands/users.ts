@@ -36,11 +36,11 @@ export function registerUserCommands(program: Command) {
     .description("Prepare owner-reviewed refresh-token revocation; existing custom tokens may still be exchanged")
     .requiredOption("--operation-id <uuid>", "Persisted UUIDv4 for this exact revocation intent")
     .action(async (id, opts) => prepareApproval(opts.operationId, "managed_users.revoke_sessions", approvalTeam(), { user_id: membershipTarget(id) }));
-  users.command("delete <id>").description("Eliminar usuario administrado según las restricciones del servidor")
-    .option("-y, --yes", "Confirmar eliminación del usuario")
+  users.command("delete <id>").description("Retirar al usuario de equipos administrados; conserva su acceso de inicio de sesión y perfil")
+    .option("-y, --yes", "Confirmar retiro de equipos; no elimina la identidad")
     .action(async (id, opts) => {
       const path = `/users/${segment(id)}`;
-      await requireConfirmation(opts.yes, `¿Eliminar al usuario ${id}?`);
+      await requireConfirmation(opts.yes, `¿Retirar al usuario ${id} de los equipos que administras? Se conservarán su identidad y perfil.`);
       show(await api("DELETE", path));
     });
 }
