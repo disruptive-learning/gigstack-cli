@@ -290,3 +290,56 @@ test("saved counters and references retain unknown states and discard unrelated 
   assert.equal(result.stdout.includes("never return"), false);
   assert.equal(f.requests.length, 1);
 });
+
+test("history command reads exact independently scoped document and strips private row fields", async (t) => {
+  const data = {
+    resource_type: "invoices",
+    resource_id: "invoice_one",
+    team_id: "t",
+    livemode: false,
+    document: {
+      id: "invoice_one",
+      team: "t",
+      livemode: false,
+      total: 100,
+      currency: "MXN",
+      items: [],
+      private_secret: "NEVER_RETURN",
+      files: { pdf: null, xml: null },
+    },
+  };
+  const { requests, run } = await fixture(t, () => ({ success: true, data }));
+  const ok = await run([
+    "payment-links",
+    "history",
+    "plink_saved",
+    "invoices",
+    "invoice_one",
+  ]);
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.equal(requests[0].method, "GET");
+  assert.match(
+    requests[0].url,
+    /\/payments\/links\/plink_saved\/history\/invoices\/invoice_one/,
+  );
+  assert.equal(ok.stdout.includes("NEVER_RETURN"), false);
+  data.team_id = "foreign";
+  const denied = await run([
+    "payment-links",
+    "history",
+    "plink_saved",
+    "invoices",
+    "invoice_one",
+  ]);
+  assert.notEqual(denied.code, 0);
+  const before = requests.length;
+  const invalid = await run([
+    "payment-links",
+    "history",
+    "plink_saved",
+    "invoices",
+    "../invoice_one",
+  ]);
+  assert.notEqual(invalid.code, 0);
+  assert.equal(requests.length, before);
+});

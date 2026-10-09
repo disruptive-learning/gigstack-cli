@@ -1,3 +1,4 @@
+import { safeHistoricalDocument } from "../payment-link-history.js";
 import { runtimeOptions } from "../runtime.js";
 import { getTeamFromKey } from "../config.js";
 import { Command } from "commander";
@@ -92,6 +93,29 @@ export function registerPaymentLinkCommands(program: Command) {
         mode = credentialMode(opts.expectedMode);
       const r = await api("GET", path(id), { team });
       printJson({ data: safeLink(r.data, team, mode, id) });
+    });
+  links
+    .command("history <id> <resourceType> <resourceId>")
+    .description(
+      "Read one current authorized invoice/receipt saved on a payment link; nested IDs remain hints",
+    )
+    .option("--expected-mode <mode>", "live|test")
+    .action(async (id, kind, resourceId, opts) => {
+      if (
+        !["invoices", "receipts"].includes(kind) ||
+        !/^[A-Za-z0-9_-]{1,160}$/.test(resourceId)
+      )
+        throw new Error("Historical resource identifier invalid");
+      const team = target(),
+        mode = credentialMode(opts.expectedMode);
+      const r = await api(
+        "GET",
+        `${path(id)}/history/${segment(kind)}/${segment(resourceId)}`,
+        { team },
+      );
+      printJson({
+        data: safeHistoricalDocument(r.data, team, mode, kind, resourceId),
+      });
     });
   links
     .command("operation <uuid>")

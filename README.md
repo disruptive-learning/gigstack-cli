@@ -1326,3 +1326,11 @@ substitution; authored overrides remain in team settings. Receipt reminder subje
 editor defaults, not computed due-date subjects.
 The response preserves the eight exact `legacy_templates` too, with a distinct strict
 `legacy_is_nonprofit` flag; legacy subjects are not approximated from language variants.
+
+Read a current authorized historical document with
+`gigstack payment-links history <linkId> <invoices|receipts> <resourceId> --team <team>`.
+The exact saved ID, current link, target module viewing permission, team and credential
+mode are independently verified. Nested IDs remain hints. Only supported public fields
+and safe already-stored PDF/XML URLs are returned. This command performs one GET,
+without document generation, file token minting, Storage writes or provider calls.
+Canonical invoice file subcollections are not downloaded by this resolver.
