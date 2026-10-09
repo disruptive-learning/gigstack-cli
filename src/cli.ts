@@ -1,3 +1,4 @@
+import { registerPortalAccessCommands } from "./commands/portal-access.js";
 import { registerPaymentReminderCommands } from "./commands/payment-reminders.js";
 import { registerVendorCommands } from "./commands/vendors.js";
 import { registerPaymentLinkCommands } from "./commands/payment-links.js";
@@ -69,6 +70,7 @@ registerPaymentReminderCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
+registerPortalAccessCommands(program);
 registerUserCommands(program);
 registerAutomationCommands(program);
 registerCredentialCommands(program);

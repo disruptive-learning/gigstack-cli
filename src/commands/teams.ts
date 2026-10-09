@@ -62,9 +62,16 @@ export function registerTeamCommands(program: Command) {
       await requireConfirmation(opts.yes, "¿Generar nuevo acceso fiscal y renovar la contraseña/desafío del portal CSD?");
       show(await api("GET", path, { sideEffect: true }));
     });
-  teams.command("portal-token <id>").description("Crear token de lectura del portal; trata la respuesta como secreto")
-    .option("--expires-in <duration>", "Duración, máximo 24h", "1h")
-    .action(async (id, opts) => call("POST", `${target(id)}/portal-access-token`, { expiresIn: opts.expiresIn }));
+  teams
+    .command("portal-token <id>")
+    .description(
+      "Retirado: usa portal-access invoices prepare con UUID persistido y aprobación personal",
+    )
+    .action(() => {
+      throw new Error(
+        "Usa portal-access invoices prepare <teamId>; la credencial se entrega sólo en el navegador privado tras revisión personal",
+      );
+    });
   teams.command("sat-connection <id>").description("Cargar CSD .cer/.key y contraseña desde archivos locales")
     .requiredOption("--cert-file <path>", "Certificado .cer")
     .requiredOption("--key-file <path>", "Llave privada .key")

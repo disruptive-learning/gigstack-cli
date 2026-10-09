@@ -134,7 +134,7 @@ test('CSD upload uses real multipart field names and does not print secret bytes
   assert.equal(r.code,0,r.stdout); json(r); const req=f.requests[0]; assert.match(req.headers['content-type'],/^multipart\/form-data; boundary=/); assert.match(req.body,/name="keyPass"/); assert.match(req.body,/synthetic-password/); assert.ok(!r.stdout.includes('synthetic-password'));
 });
 
-test('team lifecycle, series, onboarding and token commands preserve API methods and bodies', async t => {
+test('team lifecycle, series and onboarding preserve API methods; raw portal issuance is retired', async t => {
   const f = await fixture(t);
   const cases = [
     [['teams','create','--data','{"brand":{"alias":"fixture"}}'], 'POST','/v2/teams',{brand:{alias:'fixture'}}],
@@ -143,13 +143,17 @@ test('team lifecycle, series, onboarding and token commands preserve API methods
     [['teams','series','create','team_b','--data','{"series":"A","live":0,"test":0}'],'POST','/v2/teams/team_b/series',{series:'A',live:0,test:0}],
     [['teams','series','update','team_b','A','--data','{"live":5}'],'PUT','/v2/teams/team_b/series/A',{live:5}],
     [['teams','onboarding-url','team_b','--yes'],'GET','/v2/teams/team_b/onboarding-url',undefined],
-    [['teams','portal-token','team_b','--expires-in','30m'],'POST','/v2/teams/team_b/portal-access-token',{expiresIn:'30m'}],
     [['teams','delete','team_b','--yes'],'DELETE','/v2/teams/team_b',undefined],
   ];
   for (const [args, method, path, body] of cases) {
     const r = await f.run([...args,'--json']); assert.equal(r.code,0,r.stdout); json(r);
     const req=f.requests.at(-1); assert.equal(req.method,method); assert.equal(req.url,path); assert.deepEqual(req.body ? JSON.parse(req.body) : undefined,body);
   }
+  const requestCount = f.requests.length;
+  const retired = await f.run(['teams','portal-token','team_b','--json']);
+  assert.notEqual(retired.code, 0); assert.match(retired.stdout, /portal-access invoices prepare/);
+  assert.equal(f.requests.length, requestCount);
+
 });
 
 test('schema discovery is offline and exposes nested nullable settings', async t => {
