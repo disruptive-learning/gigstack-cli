@@ -36,7 +36,15 @@ function valid(v: any, s: any): boolean {
   return false;
 }
 export function stripeSchema(action: string) {
-  if (!["create", "disconnect", "terminal"].includes(action))
+  if (
+    ![
+      "create",
+      "disconnect",
+      "terminal",
+      "standard_create",
+      "standard_refresh",
+    ].includes(action)
+  )
     throw Error("Solo esquemas públicos de Stripe");
   return (schemas as any)[action];
 }
@@ -93,10 +101,19 @@ export function safeStripe(
           "manual_key",
           "connect_webhooks",
           "account_onboarding",
+          "platform_account_create",
         ].includes(value.method)
       )
         throw Error("Método inválido");
       out.method = value.method;
+    }
+    if (value.provider_account_id !== undefined) {
+      if (
+        typeof value.provider_account_id !== "string" ||
+        !/^acct_[A-Za-z0-9]+$/.test(value.provider_account_id)
+      )
+        throw Error("Cuenta de proveedor inválida");
+      out.provider_account_id = value.provider_account_id;
     }
     if (value.requester) {
       const r = value.requester;
@@ -146,10 +163,23 @@ export function safeStripe(
         "manual_key",
         "connect_webhooks",
         "account_onboarding",
+        "platform_standard",
       ].includes(value.method)
     )
       throw Error("Método inválido");
     out.method = value.method;
+    if (
+      value.platform_account !== undefined &&
+      value.platform_account !== null
+    ) {
+      if (
+        value.method !== "platform_standard" ||
+        !value.connected ||
+        value.account_id !== value.platform_account.account_id
+      )
+        throw Error("Activación fuera de la cuenta actual");
+      out.platform_account = safePlatformAccount(value.platform_account);
+    } else out.platform_account = null;
     for (const k of ["account_id", "connect_account_id"]) {
       if (!(value[k] === null || id(value[k])))
         throw Error("Cuenta Stripe inválida");
@@ -199,4 +229,53 @@ export function safeStripe(
     out.browser_handoff_url = u.href;
   }
   return out;
+}
+
+function safePlatformAccount(value: any) {
+  if (
+    !value ||
+    typeof value.account_id !== "string" ||
+    !/^acct_[A-Za-z0-9]+$/.test(value.account_id) ||
+    value.type !== "standard" ||
+    ["details_submitted", "charges_enabled", "payouts_enabled"].some(
+      (key) => typeof value[key] !== "boolean",
+    ) ||
+    !["onboarding_required", "details_submitted", "charges_enabled"].includes(
+      value.status,
+    )
+  )
+    throw Error("Activación Stripe inválida");
+  return {
+    account_id: value.account_id,
+    type: "standard",
+    details_submitted: value.details_submitted,
+    charges_enabled: value.charges_enabled,
+    payouts_enabled: value.payouts_enabled,
+    status: value.status,
+  };
+}
+export function safeStripeActivation(
+  value: any,
+  team: string,
+  mode: boolean,
+  accountId: string,
+  expectedGeneration: number,
+) {
+  if (
+    !value ||
+    value.team_id !== team ||
+    value.livemode !== mode ||
+    value.account_id !== accountId ||
+    value.generation !== expectedGeneration ||
+    !generation(value.generation) ||
+    !id(value.billing_account_id)
+  )
+    throw Error("Activación fuera del equipo, modo, cuenta o generación");
+  return {
+    team_id: team,
+    billing_account_id: value.billing_account_id,
+    livemode: mode,
+    generation: expectedGeneration,
+    ...safePlatformAccount(value),
+  };
 }

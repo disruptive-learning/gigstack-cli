@@ -11,6 +11,7 @@ import {
 } from "../input.js";
 import {
   safeStripe,
+  safeStripeActivation,
   stripeInput,
   stripeSchema,
   stripeUuid,
@@ -41,26 +42,35 @@ export function registerStripeConnectionCommands(program: Command) {
         });
       printJson({ data: safeStripe(res.data, team, mode) });
     });
-  for (const action of ["prepare", "disconnect"] as const)
+  for (const action of ["prepare", "disconnect", "create-standard"] as const)
     withJsonInput(
       commands
         .command(`${action} <teamId>`)
         .option("--expected-mode <mode>", "live|test")
         .option("--yes", "Confirmar eliminación local de credenciales")
         .description(
-          action === "prepare"
-            ? "Guarda UUID antes de enviar; devuelve revisión privada sin credenciales"
-            : "Elimina credenciales compartidas de ambos modos; no cancela llamadas ya autorizadas ni revoca Stripe",
+          action === "create-standard"
+            ? "Crea cuenta Standard real con UUID guardado; no prueba activación, consulta tras respuesta incierta"
+            : action === "prepare"
+              ? "Guarda UUID antes de enviar; devuelve revisión privada sin credenciales"
+              : "Elimina credenciales compartidas de ambos modos; no cancela llamadas ya autorizadas ni revoca Stripe",
         ),
     ).action(async (team, opts) => {
       const mode = credentialMode(opts.expectedMode),
         input = await readJsonInput(opts);
       if (input.livemode !== undefined && input.livemode !== mode)
         throw Error("El modo no coincide con la credencial");
-      const body = stripeInput(action === "prepare" ? "create" : "disconnect", {
-        ...input,
-        livemode: mode,
-      });
+      const body = stripeInput(
+        action === "prepare"
+          ? "create"
+          : action === "create-standard"
+            ? "standard_create"
+            : "disconnect",
+        {
+          ...input,
+          livemode: mode,
+        },
+      );
       if (action === "disconnect")
         await requireConfirmation(
           opts.yes,
@@ -69,13 +79,47 @@ export function registerStripeConnectionCommands(program: Command) {
       const res = await api(
         "POST",
         root(team) +
-          (action === "prepare" ? "/connection-sessions" : "/disconnect"),
+          (action === "prepare"
+            ? "/connection-sessions"
+            : action === "create-standard"
+              ? "/standard-accounts"
+              : "/disconnect"),
         { team, body },
       );
       printJson({
         data: safeStripe(res.data, team, mode, String(body.operation_id)),
       });
     });
+  withJsonInput(
+    commands
+      .command("refresh-standard <teamId> <accountId>")
+      .option("--expected-mode <mode>", "live|test")
+      .description(
+        "Consultar activación actual en Stripe; sin crear cuentas ni repetir efectos financieros",
+      ),
+  ).action(async (team, accountId, opts) => {
+    if (!/^acct_[A-Za-z0-9]+$/.test(accountId))
+      throw Error("Cuenta Stripe inválida");
+    const mode = credentialMode(opts.expectedMode),
+      input = await readJsonInput(opts);
+    if (input.livemode !== undefined && input.livemode !== mode)
+      throw Error("El modo no coincide con la credencial");
+    const body = stripeInput("standard_refresh", { ...input, livemode: mode });
+    const res = await api(
+      "POST",
+      root(team) + `/standard-accounts/${segment(accountId)}/refresh`,
+      { team, body },
+    );
+    printJson({
+      data: safeStripeActivation(
+        res.data,
+        team,
+        mode,
+        accountId,
+        Number(body.expected_generation),
+      ),
+    });
+  });
   for (const action of ["operation", "cancel"] as const)
     commands
       .command(`${action} <teamId> <operationId>`)

@@ -1393,4 +1393,17 @@ before transport and use readback after a lost response. `cancel` releases untou
 preparations. `disconnect --yes --data <finite-operation-JSON>` removes shared local
 credentials from both live/test modes; it does not revoke Stripe authorization or
 remove remote webhooks. Unknown effects require explicit private local closure, not
-automatic replay. Platform activation, pricing/import and payment replay are separate.
+automatic replay. Pricing/import, transfer setup and payment replay are separate.
+
+```bash
+gigstack stripe-connection create-standard <teamId> --data '{"operation_id":"<saved-UUIDv4>","expected_generation":0}' --expected-mode test --json
+gigstack stripe-connection refresh-standard <teamId> <acct_current> --data '{"expected_generation":1}' --expected-mode test --json
+```
+
+Standard creation is an ordinary current-grant action and uses the current team ID and
+email when present. The receipt returns a safe account ID and browser handoff. A completed
+creation does not prove onboarding or enabled charges. Prepare a separate
+`account_onboarding` session at the new generation for explicit private browser review.
+Refresh retrieves the exact selected-mode provider account and reports activation flags;
+returning from onboarding is not proof of completion. After an unknown creation response,
+read the saved operation UUID without automatically replaying provider creation.

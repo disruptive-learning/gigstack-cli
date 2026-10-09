@@ -160,6 +160,131 @@ test("actual CLI cancel and local disconnect send finite bodies and never claim 
 
 test("published Stripe adapter contract contains only public requests", async () => {
   const fs = await import("node:fs/promises");
-  const contract = JSON.parse(await fs.readFile(new URL("../src/contracts/stripe-connection-request.schema.json", import.meta.url), "utf8"));
-  assert.deepEqual(Object.keys(contract), ["create", "disconnect", "terminal"]);
+  const contract = JSON.parse(
+    await fs.readFile(
+      new URL(
+        "../src/contracts/stripe-connection-request.schema.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(Object.keys(contract), [
+    "create",
+    "disconnect",
+    "terminal",
+    "standard_create",
+    "standard_refresh",
+  ]);
+});
+
+test("actual Standard CLI creates directly with saved UUID, refreshes exact account and reads unknown without replay", async (t) => {
+  const f = await fixture(t),
+    account = "acct_standardSynthetic";
+  f.setReply({
+    ...receipt,
+    method: "platform_account_create",
+    generation: 1,
+    status: "completed",
+    provider_account_id: account,
+    email: "SYNTHETIC_SECRET",
+    onboarding_url: "SYNTHETIC_SECRET",
+  });
+  const created = await f.run([
+    "create-standard",
+    "team_test",
+    "--data",
+    JSON.stringify({ operation_id: op, expected_generation: 0 }),
+  ]);
+  assert.equal(created.code, 0, created.stdout + created.stderr);
+  assert.equal(created.stdout.includes("SYNTHETIC_SECRET"), false);
+  assert.equal(JSON.parse(created.stdout).data.provider_account_id, account);
+  assert.deepEqual(f.requests[0].body, {
+    operation_id: op,
+    expected_generation: 0,
+    livemode: false,
+  });
+  assert.match(f.requests[0].url, /\/standard-accounts/);
+  f.setReply({
+    team_id: "team_test",
+    billing_account_id: "account",
+    livemode: false,
+    generation: 1,
+    account_id: account,
+    type: "standard",
+    details_submitted: true,
+    charges_enabled: false,
+    payouts_enabled: false,
+    status: "details_submitted",
+    email: "SYNTHETIC_SECRET",
+  });
+  const refreshed = await f.run([
+    "refresh-standard",
+    "team_test",
+    account,
+    "--data",
+    JSON.stringify({ expected_generation: 1 }),
+  ]);
+  assert.equal(refreshed.code, 0, refreshed.stdout + refreshed.stderr);
+  assert.equal(refreshed.stdout.includes("SYNTHETIC_SECRET"), false);
+  assert.equal(JSON.parse(refreshed.stdout).data.charges_enabled, false);
+  assert.deepEqual(f.requests[1].body, {
+    expected_generation: 1,
+    livemode: false,
+  });
+  assert.match(
+    f.requests[1].url,
+    new RegExp(`/standard-accounts/${account}/refresh`),
+  );
+  f.setReply({
+    ...receipt,
+    method: "platform_account_create",
+    status: "outcome_unknown",
+    provider_account_id: account,
+  });
+  const read = await f.run(["operation", "team_test", op]);
+  assert.equal(read.code, 0, read.stdout + read.stderr);
+  assert.equal(f.requests[2].method, "GET");
+  assert.equal(JSON.parse(read.stdout).data.status, "outcome_unknown");
+  const count = f.requests.length;
+  for (const input of [
+    { operation_id: op, expected_generation: 0, email: "forged@example.test" },
+    { operation_id: op, expected_generation: 0, livemode: true },
+  ])
+    assert.notEqual(
+      (
+        await f.run([
+          "create-standard",
+          "team_test",
+          "--data",
+          JSON.stringify(input),
+        ])
+      ).code,
+      0,
+    );
+  assert.equal(f.requests.length, count);
+  f.setReply({
+    team_id: "team_test",
+    billing_account_id: "account",
+    livemode: false,
+    generation: 1,
+    account_id: "acct_wrong",
+    type: "standard",
+    details_submitted: true,
+    charges_enabled: false,
+    payouts_enabled: false,
+    status: "details_submitted",
+  });
+  assert.notEqual(
+    (
+      await f.run([
+        "refresh-standard",
+        "team_test",
+        account,
+        "--data",
+        JSON.stringify({ expected_generation: 1 }),
+      ])
+    ).code,
+    0,
+  );
 });
