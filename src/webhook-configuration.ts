@@ -69,6 +69,9 @@ export function savedWebhook(value: any): Record<string, any> {
   };
 }
 const codes = [
+  "team_not_found",
+  "invalid_webhook_configuration",
+  "original_credential_scope_changed",
   "webhook_plan_required",
   "webhook_revision_conflict",
   "webhook_configuration_forbidden",

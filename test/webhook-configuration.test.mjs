@@ -346,3 +346,22 @@ test("agent schema keeps all 26 events and removes private header/signing entry"
   assert.ok(schema.required.includes("operation_id"));
   assert.equal(f.requests.length, 0);
 });
+
+test("restored authority reads historical known conflict causes", async (t) => {
+  let error = "team_not_found";
+  const f = await fixture(t, () => ({
+    data: null,
+    operation: { ...operation, status: "conflict", error },
+  }));
+  for (const code of [
+    "team_not_found",
+    "invalid_webhook_configuration",
+    "original_credential_scope_changed",
+    "webhook_plan_required",
+  ]) {
+    error = code;
+    const r = await f.run(["webhooks", "configuration-operation", id]);
+    assert.equal(r.code, 1);
+    assert.equal(JSON.parse(r.stdout).operation.error, code);
+  }
+});
