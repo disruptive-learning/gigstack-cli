@@ -601,7 +601,7 @@ gigstack teams members list team_123 --json
 gigstack teams members add team_123 user_456 --role viewer --json
 gigstack teams members update team_123 user_456 --data '{"role":"viewer","permissions":{"invoices":"viewer","payments":"none"}}' --json
 gigstack teams members remove team_123 user_456 --yes --json
-gigstack teams transfer-ownership team_123 user_456 --yes --json
+gigstack teams transfer-ownership team_123 user_456 --operation-id "$OPERATION_ID" --json
 gigstack teams invitations list team_123 --json
 gigstack teams invitations create team_123 --email person@example.com --role viewer --json
 gigstack teams invitations create team_123 --email person@example.com --no-send-email --json
@@ -611,6 +611,18 @@ gigstack teams invitations revoke team_123 invite_123 --yes --json
 gigstack teams invitations accept --file invitation.json --json
 gigstack teams invitations decline --file invitation.json --json
 ```
+
+Ownership transfer and `members add --role admin` / `members update --data '{"role":"admin"}'`
+prepare a browser approval with a required `--operation-id` UUIDv4 saved before the
+first attempt. Reuse the same ID only for the identical request after a timeout.
+Open `review_url` as the current team owner to review the frozen target identity,
+prior role and owner before confirming. Preparation does not change membership.
+Membership applies to both live and test modes (`requested_modes: []`); team
+ownership transfer does not transfer billing-account ownership. Administrator
+promotion cannot include permission changes in the same request. Use
+`account-approvals get` or `cancel` for safe status/receipt or pending cancellation.
+The CLI cannot review or execute an approval. Other roles and permission edits
+retain their direct behavior. Invitations remain a separate workflow.
 
 `members add` attaches an existing user from the same billing account; it does
 not send an email invitation. Role/permission edits, removal and ownership

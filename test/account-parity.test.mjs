@@ -87,7 +87,6 @@ test('membership and invitations use explicit operations and preserve role/permi
     [['teams','members','list','team_b'], 'GET', '/v2/teams/team_b/members', undefined],
     [['teams','members','update','team_b','u1','--data','{"role":"blocked","permissions":{"invoices":"none"}}'], 'PATCH', '/v2/teams/team_b/members/u1', { role:'blocked', permissions:{invoices:'none'} }],
     [['teams','members','remove','team_b','u1','--yes'], 'DELETE', '/v2/teams/team_b/members/u1', undefined],
-    [['teams','transfer-ownership','team_b','u1','--yes'], 'POST', '/v2/teams/team_b/transfer-ownership', {new_owner_id:'u1'}],
     [['teams','invitations','create','team_b','--email','person@example.invalid','--role','editor','--no-send-email'], 'POST', '/v2/teams/team_b/invitations', {email:'person@example.invalid',role:'editor',send_email:false}],
     [['teams','invitations','resend','team_b','i1'], 'POST', '/v2/teams/team_b/invitations/i1/resend', {}],
     [['teams','invitations','revoke','team_b','i1','--yes'], 'DELETE', '/v2/teams/team_b/invitations/i1', undefined],

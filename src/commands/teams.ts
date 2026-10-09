@@ -1,3 +1,4 @@
+import { approvalTeam, membershipTarget, prepareApproval } from "../account-approvals.js";
 import { registerFiscalSessionCommands } from "./fiscal-sessions.js";
 import { readFile } from "node:fs/promises";
 import { Command } from "commander";
@@ -90,14 +91,28 @@ export function registerTeamCommands(program: Command) {
 
   const members = teams.command("members").description("Miembros y permisos; cambios de rol/remoción requieren propietario");
   members.command("list <id>").action(async id => call("GET", `${target(id)}/members`));
-  members.command("add <id> <userId>").description("Agregar usuario existente de la misma cuenta de facturación; no envía invitación")
+  members.command("add <id> <userId>").description("Agregar editor/viewer directamente; admin prepara aprobación del propietario en navegador, sin enviar invitación")
     .option("--role <role>", "admin, editor o viewer", "viewer")
+    .option("--operation-id <uuid>", "Requerido para admin: UUIDv4 guardado antes de preparar aprobación")
     .action(async (id, userId, opts) => {
       if (!["admin", "editor", "viewer"].includes(opts.role)) throw new Error("Rol inválido");
-      await call("POST", `${target(id)}/add-member`, { id: userId, role: opts.role });
+      const path = target(id);
+      if (opts.role === "admin") return prepareApproval(opts.operationId, "team.members.add_admin", approvalTeam(id), { member_id: membershipTarget(userId) });
+      if (opts.operationId) throw new Error("operation-id sólo corresponde a aprobación admin; editor/viewer usa actualización directa");
+      await call("POST", `${path}/add-member`, { id: userId, role: opts.role });
     });
-  withJsonInput(members.command("update <id> <memberId>").description("Actualizar role y/o permissions (invoices, receipts, payments, services, expenses)"))
-    .action(async (id, memberId, opts) => call("PATCH", `${target(id)}/members/${segment(memberId)}`, await readJsonInput(opts)));
+  withJsonInput(members.command("update <id> <memberId>").description("Actualizar role/permissions; role admin prepara aprobación y no admite cambios de permisos simultáneos"))
+    .option("--operation-id <uuid>", "Requerido para role admin: UUIDv4 persistido de aprobación")
+    .action(async (id, memberId, opts) => {
+      const path = `${target(id)}/members/${segment(memberId)}`;
+      const body = await readJsonInput(opts);
+      if (body.role === "admin") {
+        if (Object.keys(body).some(key => key !== "role")) throw new Error("Aprobación admin acepta sólo role; solicita cambios de permisos por separado después de revisar");
+        return prepareApproval(opts.operationId, "team.members.promote_admin", approvalTeam(id), { member_id: membershipTarget(memberId) });
+      }
+      if (opts.operationId) throw new Error("operation-id sólo corresponde a aprobación admin; otros cambios son directos");
+      await call("PATCH", path, body);
+    });
   members.command("remove <id> <memberId>").description("Remover miembro como propietario autenticado")
     .option("-y, --yes", "Confirmar remoción")
     .action(async (id, memberId, opts) => {
@@ -105,12 +120,11 @@ export function registerTeamCommands(program: Command) {
       await requireConfirmation(opts.yes, `¿Remover a ${memberId} del equipo ${id}?`);
       await call("DELETE", path);
     });
-  teams.command("transfer-ownership <id> <newOwnerId>").description("Transferir propiedad a un miembro; exige identidad del propietario actual")
-    .option("-y, --yes", "Confirmar transferencia")
+  teams.command("transfer-ownership <id> <newOwnerId>").description("Preparar aprobación del propietario actual en navegador; no transfiere propiedad por sí sola")
+    .requiredOption("--operation-id <uuid>", "UUIDv4 guardado antes de preparar; reusar sólo con destino idéntico")
     .action(async (id, newOwnerId, opts) => {
-      const path = target(id);
-      await requireConfirmation(opts.yes, `¿Transferir la propiedad del equipo ${id} a ${newOwnerId}?`);
-      await call("POST", `${path}/transfer-ownership`, { new_owner_id: newOwnerId });
+      target(id);
+      await prepareApproval(opts.operationId, "team.ownership.transfer", approvalTeam(id), { new_owner_id: membershipTarget(newOwnerId) });
     });
 
   const invites = teams.command("invitations").description("Invitaciones por correo; administración requiere identidad de usuario admin");

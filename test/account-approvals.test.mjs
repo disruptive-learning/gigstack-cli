@@ -42,7 +42,7 @@ const json = result => { assert.ok(result.stdout.trim(), 'machine response prese
 
 const operation = '00000000-0000-4000-8000-000000000001';
 const id = 'a'.repeat(64);
-const approval = { id, operation_id: operation, action: 'api_keys.generate', team: { id:'team_b',legal_name:null,tax_id:null }, billing_account_id:'ba_fixture',payload:{},requested_modes:[true,false],effect_scope:'team_credentials',status:'pending',created_at:1,expires_at:600001,completed_at:null,review_url:`https://app.gigstack.pro/account/approvals/${id}`,can_cancel:true,disclosure_version:'credential-approval-v1',existing_key_ids:[],terms:null,receipt:null,error:null };
+const approval = { id, operation_id: operation, action: 'api_keys.generate', team: { id:'team_b',legal_name:null,tax_id:null }, billing_account_id:'ba_fixture',payload:{},requested_modes:[true,false],effect_scope:'team_credentials',status:'pending',created_at:1,expires_at:600001,completed_at:null,review_url:`https://app.gigstack.pro/account/approvals/${id}`,can_cancel:true,disclosure_version:'credential-approval-v1',existing_key_ids:[],terms:null,membership_change:null,receipt:null,error:null };
 test('prepare API creation, rotation and MCP token uses stable explicit IDs without issuing credentials', async t => {
  const f = await fixture(t, () => ({success:true,data:approval}));
  const cases = [
@@ -61,7 +61,7 @@ test('prepare API creation, rotation and MCP token uses stable explicit IDs with
  }
 });
 test('approval get/cancel retain metadata receipt and discard accidental secrets or browser challenges',async t=>{
- const data={...approval,status:'completed',completed_at:2,can_cancel:false,secrets:{live:'synthetic-secret'},apikey:'synthetic-secret',challenge:'synthetic-secret',receipt:{keys:[{key_id:'key_fixture',type:'api',livemode:true,apikey:'synthetic-secret'}],revoked_count:2}};
+ const data={...approval,status:'completed',completed_at:2,can_cancel:false,secrets:{live:'synthetic-secret'},apikey:'synthetic-secret',challenge:'synthetic-secret',receipt:{keys:[{key_id:'key_fixture',type:'api',livemode:true,apikey:'synthetic-secret'}],revoked_count:2,membership:null}};
  const f=await fixture(t,()=>({success:true,data}));
  for(const [args,method] of [[['account-approvals','get',id],'GET'],[['account-approvals','cancel',id,'--yes'],'DELETE']]) {
   const r=await f.run([...args,'--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.equal(json(r).data.status,'completed');
@@ -97,4 +97,62 @@ test('timeout retains operation ID and sends only one request',async t=>{
  assert.equal(r.code,1);assert.equal(f.requests.length,1);assert.match(r.stdout,RegExp(operation));
  assert.equal(f.requests[0].method,'POST');assert.equal(new URL(f.requests[0].url,f.base).pathname,'/v2/users/me/account-approvals');assert.equal(JSON.parse(f.requests[0].body).operation_id,operation);
  assert.equal(json(r).error.code,'approval_not_confirmed');
+});
+
+const membershipCases = [
+  [['teams','transfer-ownership','team_b','user_target'], 'team.ownership.transfer', {new_owner_id:'user_target'}],
+  [['teams','members','add','team_b','user_target','--role','admin'], 'team.members.add_admin', {member_id:'user_target'}],
+  [['teams','members','update','team_b','user_target','--data','{"role":"admin"}'], 'team.members.promote_admin', {member_id:'user_target'}],
+];
+function membershipApproval(action, payload) {
+ return {...approval,action,payload,requested_modes:[],effect_scope:'team_membership',disclosure_version:'membership-approval-v1',membership_change:{target:{id:'user_target',email:'target@example.invalid',display_name:'Target'},previous_owner_id:'user_owner',previous_role:action==='team.members.add_admin'?null:'viewer',new_role:'admin',transfers_ownership:action==='team.ownership.transfer',billing_ownership_changes:false,hidden_member:false}};
+}
+test('membership commands prepare exact target-only approvals and propagate the positional team',async t=>{
+ const f=await fixture(t, req=>{const body=JSON.parse(req.body);return {success:true,data:membershipApproval(body.action,body.payload)};});
+ for(const [args,action,payload] of membershipCases) {
+  for(let attempt=0;attempt<2;attempt++) {
+   const r=await f.run([...args,'--operation-id',operation,'--json']);
+   assert.equal(r.code,0,r.stdout+r.stderr);assert.deepEqual(json(r).data,membershipApproval(action,payload));
+   const req=f.requests.at(-1);assert.equal(req.method,'POST');
+   const url=new URL(req.url,f.base);assert.equal(url.pathname,'/v2/users/me/account-approvals');assert.equal(url.searchParams.get('team'),'team_b');
+   assert.deepEqual(JSON.parse(req.body),{operation_id:operation,action,team_id:'team_b',payload});
+   assert.match(json(r).next_step,/Preparar no cambia membresía/);assert.match(json(r).next_step,/ambos modos/);
+  }
+ }
+ assert.equal(f.requests.length,6);
+});
+test('membership preparation refuses missing IDs, mixed permission changes and old direct execution flags without HTTP',async t=>{
+ const f=await fixture(t);
+ const cases=[
+ ...membershipCases.map(([args])=>args),
+ ['teams','transfer-ownership','team_b','user_target','--operation-id',operation,'--yes'],
+ ['teams','members','add','team_b','../target','--role','admin','--operation-id',operation],
+ ['teams','members','add','team_b','user_target','--role','viewer','--operation-id',operation],
+ ['teams','members','update','team_b','user_target','--data','{"role":"admin","permissions":{}}','--operation-id',operation],
+ ['teams','members','update','team_b','user_target','--data','{"role":"admin","ghost":true}','--operation-id',operation],
+ ['teams','members','update','team_b','user_target','--data','{"role":"editor"}','--operation-id',operation],
+ ['teams','transfer-ownership','team_b','user_target','--operation-id',operation,'--team','other'],
+ ];
+ for(const args of cases){const r=await f.run([...args,'--json']);assert.equal(r.code,1,r.stdout+r.stderr);}
+ assert.equal(f.requests.length,0);
+});
+test('membership completed receipts retain frozen identity and allowlisted result, never extra secrets or authority',async t=>{
+ for(const [,action,payload] of membershipCases) {
+  const data=membershipApproval(action,payload);data.status='completed';data.completed_at=2;data.can_cancel=false;
+  data.receipt={keys:[],revoked_count:0,membership:{action,member_id:'user_target',owner_id:action==='team.ownership.transfer'?'user_target':'user_owner',previous_owner_id:'user_owner',role:'admin',is_owner:action==='team.ownership.transfer',added:action==='team.members.add_admin'}};
+  const expected=structuredClone(data);
+  data.membership_change.target.apikey='synthetic-secret';data.receipt.membership.claims='synthetic-secret';data.secrets='synthetic-secret';data.challenge='synthetic-secret';
+  const f=await fixture(t,()=>({success:true,data}));
+  for(const args of [['account-approvals','get',id],['account-approvals','cancel',id,'--yes']]) {
+   const r=await f.run([...args,'--team','team_b','--json']);assert.equal(r.code,0,r.stdout+r.stderr);assert.deepEqual(json(r).data,expected);assert.doesNotMatch(r.stdout+r.stderr,/synthetic-secret|claims|apikey|challenge/);
+  }
+ }
+});
+test('membership transport timeout preserves the stable ID and never retries the POST',async t=>{
+ for(const [args,action,payload] of membershipCases) {
+  const f=await fixture(t,()=>({timeoutAfterHeaders:true}));
+  const r=await f.run([...args,'--operation-id',operation,'--json'],{timeoutAfterHeaders:true});
+  assert.equal(r.code,1);assert.equal(json(r).error.code,'approval_not_confirmed');assert.match(r.stdout,RegExp(operation));
+  assert.equal(f.requests.length,1);assert.equal(f.requests[0].method,'POST');assert.deepEqual(JSON.parse(f.requests[0].body),{operation_id:operation,action,team_id:'team_b',payload});
+ }
 });
