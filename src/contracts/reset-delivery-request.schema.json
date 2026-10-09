@@ -1,0 +1,55 @@
+{
+  "prepare": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirm_reset_email"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "confirm_reset_email": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      }
+    }
+  },
+  "prepare_recovery": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirm_reset_email",
+      "supersedes_operation_id"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "confirm_reset_email": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      },
+      "supersedes_operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      }
+    }
+  }
+}

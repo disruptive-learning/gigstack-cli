@@ -1353,3 +1353,23 @@ After an uncertain response, use `operation`, `reconcile` or `continue` with the
 Removing all individual reminders can enable team defaults. Test mode in production can send real emails. A saved configuration or accepted provider result does not prove email delivery. This surface is implemented in source; it does not establish deployment or live-provider verification.
 
 `gigstack logs api get TEAM_ID LOG_ID --output ./api-log.json` saves the same authorized redacted detail as the API/browser/MCP; it never overwrites an existing file. `request_payload`, `query_payload`, and `response_payload` retain allowed fiscal amounts, flags and SAT/DIAN catalog values. Free text, IDs, metadata, headers, URLs and historical credentials remain explicitly redacted; omitted keys/items and bounded truncation carry markers. Original credentials and current account/team/mode are revalidated by the server after reads. Webhook detail stays structure-only.
+
+### Password reset delivery operations
+
+`password-reset prepare <userId>` accepts JSON with a saved UUIDv4
+`operation_id`, credential-matching `expected_livemode`, and
+`confirm_reset_email:true`. It sends no email. Use `get <userId> <operationId>`
+for readback, `execute <userId> <operationId> --yes` to explicitly request the
+prepared email, and `cancel` only for an untouched preparation. No effect is
+automatically retried. After response loss, keep the UUID and read its status.
+
+`prepare-recovery <userId>` adds a distinct `supersedes_operation_id`;
+`get-recovery` reads its safe status and private browser handoff. Recipient review
+and recovery execution require a current person in that browser and cannot be
+performed through CLI arguments. Unknown outcomes retain safe receipt metadata
+and exit 1. No command prints a reset link, recipient or reviewer challenge.
+Provider acceptance is neither delivery nor password change. Reset affects the
+global login even in test mode; an earlier code may remain valid and recovery
+may send another email. These are offline-verified adapters; route mounting and
+legacy `users reset-password` retirement require the coordinated backend/browser
+cutover.

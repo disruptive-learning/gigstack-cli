@@ -1,3 +1,4 @@
+import { registerResetDeliveryCommands } from "./commands/reset-delivery.js";
 import { registerPortalAccessCommands } from "./commands/portal-access.js";
 import { registerPaymentReminderCommands } from "./commands/payment-reminders.js";
 import { registerVendorCommands } from "./commands/vendors.js";
@@ -71,6 +72,7 @@ registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
 registerPortalAccessCommands(program);
+registerResetDeliveryCommands(program);
 registerUserCommands(program);
 registerAutomationCommands(program);
 registerCredentialCommands(program);
