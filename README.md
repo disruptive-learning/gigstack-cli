@@ -1043,3 +1043,18 @@ Partial failures, rejected items and outcomes needing review exit nonzero while 
 or base64 `content` format (up to 50 files). It preserves all per-file outcomes and exits nonzero
 if any file is not imported. `invoices errors --q <text> --page <n>` reads the CFDI error catalog;
 it is not a queue of failed invoices belonging to your team.
+
+### Provider connection handoffs
+
+```bash
+gigstack integrations setup create TEAM_ID --provider airtable --yes --json
+gigstack integrations setup get TEAM_ID SESSION_ID --json
+gigstack integrations setup reconcile TEAM_ID SESSION_ID --json
+gigstack integrations setup cancel TEAM_ID SESSION_ID --yes --json
+```
+
+The initial setup adapters are `airtable`, `mercadolibre`, `netsuite`, and `zettle`. Creating a session returns an authenticated `completion_url`; a person opens it, reviews the returned disclosures and submits OAuth consent or private credentials in the browser. No provider password, key or OAuth authorization URL belongs in CLI arguments. A created session is not a completed connection.
+
+Read the returned `effect_scope` and `credential_livemode`: Airtable/MercadoLibre credentials are shared by the team, NetSuite selects a credential environment, and Zettle's mode selects imports for its connection. Current user permissions and entitlements are checked by the server. An existing session lock must be inspected before starting another. Cancellation applies to pending/expired sessions and does not disconnect an established provider.
+
+Unknown or failed sessions preserve their full state and exit 1. Reconcile reads evidence without replaying the provider call. Explicit recovery and credential resubmission happen in the browser; there are no CLI submit/resolve commands.
