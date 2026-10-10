@@ -1,3 +1,8 @@
+import { readFile, stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
+import { segment, requireConfirmation } from "../input.js";
+import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
+import { registerSupportDocumentCommands } from "./documents.js";
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
@@ -16,6 +21,33 @@ const TAX_SYSTEMS = [
 
 export function registerClientCommands(program: Command) {
   const clients = program.command("clients").description("Gestionar clientes");
+  registerSupportDocumentCommands(clients, "clients");
+  clients.command("upload-csf").description("Create/update a client from a local CSF PDF; consults SAT fiscal details")
+    .requiredOption("--file <path>", "Local CSF PDF, at most 5 MiB")
+    .option("--client <id>", "Shared team client to update across live/test workflows; omitted creates a client")
+    .option("-y, --yes", "Confirm fiscal-data lookup and client save")
+    .action(async opts => {
+      if (opts.client !== undefined) segment(opts.client);
+      const info = await stat(opts.file);
+      if (extname(opts.file).toLowerCase() !== ".pdf" || !info.isFile() || info.size < 5 || info.size > 5 * 1024 * 1024) throw new Error("CSF must be a local PDF up to 5 MiB");
+      const bytes = await readFile(opts.file);
+      if (bytes.length > 5 * 1024 * 1024 || bytes.subarray(0,5).toString() !== "%PDF-") throw new Error("Invalid or oversized CSF PDF");
+      await requireConfirmation(opts.yes, opts.client
+        ? "Read SAT fiscal details and update this shared team client used by live and sandbox workflows?"
+        : "Read SAT fiscal details and create this client in the selected team and credential mode?");
+      const form = new FormData();
+      form.append("file", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), basename(opts.file));
+      printJson(await api("POST", "/clients/csf", { form, query: opts.client ? { client_id: opts.client } : {} }));
+    });
+  clients.command("stamp-pending-receipts <id>").description("Stamp up to 100 pending client receipts; inspect failed and remaining")
+    .option("-y, --yes", "Confirm fiscal stamping")
+    .action(async (id, opts) => {
+      const path = `/clients/${segment(id)}/stamp-pending-receipts`;
+      await requireConfirmation(opts.yes, "Stamp the client's pending receipts in the selected team and mode?");
+      const response = await api("POST", path);
+      printJson(response);
+      if (Number(response.data?.failed) > 0) process.exitCode = 1;
+    });
 
   withListOpts(
     clients
@@ -37,7 +69,7 @@ export function registerClientCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -60,10 +92,10 @@ export function registerClientCommands(program: Command) {
           Válido: c.is_valid ? "Sí" : "No",
           Creado: formatDate(c.created_at),
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
-  clients
+  withCompleteBody(clients
     .command("create")
     .description("Crear un cliente (interactivo si no se pasan flags)")
     .option("--name <name>", "Nombre o razón social")
@@ -72,9 +104,10 @@ export function registerClientCommands(program: Command) {
     .option("--tax-system <code>", "Régimen fiscal (ej: 601, 612, 626)")
     .option("--zip <zip>", "Código postal")
     .option("--use <use>", "Uso CFDI", "G03")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", `/clients`);
         const interactive = !opts.name && !opts.rfc;
         const name = opts.name || (interactive ? await askRequired("Nombre / razón social") : "");
         const email = opts.email || (interactive ? await ask("Email") : "");
@@ -98,10 +131,10 @@ export function registerClientCommands(program: Command) {
         success(`Cliente creado: ${res.data.id}`);
         if (!isJsonMode()) console.log(`  RFC: ${res.data.tax_id}  Email: ${res.data.email || "—"}`);
         else printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
-  clients
+  withCompleteBody(clients
     .command("update <id>")
     .description("Actualizar un cliente")
     .option("--name <name>", "Nombre o razón social")
@@ -110,9 +143,10 @@ export function registerClientCommands(program: Command) {
     .option("--tax-system <code>", "Régimen fiscal")
     .option("--zip <zip>", "Código postal")
     .option("--use <use>", "Uso CFDI")
-    .option("--team <id>", "Team ID")
-    .action(async (id, opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (id, opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "PUT", `/clients/${segment(id)}`);
         const hasFlags = opts.name || opts.email || opts.rfc || opts.taxSystem || opts.zip || opts.use;
         let body: any = {};
 
@@ -147,7 +181,7 @@ export function registerClientCommands(program: Command) {
         const res = await spin("Actualizando cliente…", () => api("PUT", `/clients/${id}`, { body, team: opts.team }));
         success(`Cliente ${id} actualizado`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -167,7 +201,7 @@ export function registerClientCommands(program: Command) {
             email: c.email || "—",
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
@@ -180,39 +214,18 @@ export function registerClientCommands(program: Command) {
         success("Validación completada");
         if (isJsonMode()) printJson(res.data);
         else printKeyValue(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   clients
     .command("portal")
-    .description("Generar link del portal de cliente (autofactura, documentos, pagos)")
-    .option("--id <id>", "Client ID")
-    .option("--email <email>", "Email del cliente")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
-      try {
-        if (!opts.id && !opts.email) {
-          const query = await askRequired("Email o ID del cliente");
-          if (query.startsWith("client_") || query.startsWith("cus_")) opts.id = query;
-          else opts.email = query;
-        }
-
-        const body: any = {};
-        if (opts.id) body.id = opts.id;
-        if (opts.email) body.email = opts.email;
-
-        const res = await spin("Generando portal…", () => api("POST", "/clients/customerportal", { body, team: opts.team }));
-        const data = res.data;
-
-        if (isJsonMode()) return printJson(data);
-
-        success("Portal generado");
-        console.log(`  URL: ${pc.bold(data.url)}`);
-        if (data.expires_at) {
-          const expires = new Date(data.expires_at > 1e12 ? data.expires_at : data.expires_at * 1000);
-          console.log(pc.dim(`  Expira: ${expires.toISOString().slice(0, 10)} (5 días)`));
-        }
-      } catch (e: any) { error(e.message); }
+    .description(
+      "Retirado: usa portal-access customer prepare con UUID persistido y aprobación personal",
+    )
+    .action(() => {
+      throw new Error(
+        "Usa portal-access customer prepare <teamId>; la credencial se entrega sólo en el navegador privado tras revisión personal",
+      );
     });
 
   clients
@@ -223,6 +236,6 @@ export function registerClientCommands(program: Command) {
       try {
         await api("DELETE", `/clients/${id}`, { team: opts.team });
         success(`Cliente ${id} eliminado`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

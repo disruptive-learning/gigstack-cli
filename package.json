@@ -1,7 +1,7 @@
 {
   "name": "gigstack",
   "version": "0.3.1",
-  "description": "gigstack CLI — facturación electrónica desde tu terminal",
+  "description": "gigstack CLI \u2014 facturaci\u00f3n electr\u00f3nica desde tu terminal",
   "type": "module",
   "bin": {
     "gigstack": "dist/cli.mjs"
@@ -13,7 +13,9 @@
   "scripts": {
     "build": "node build.mjs",
     "dev": "tsx src/cli.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "keywords": [
     "gigstack",

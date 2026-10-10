@@ -2,7 +2,8 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { saveProfile, removeProfile, switchProfile, getActiveProfile, listProfiles, isTestKey } from "../config.js";
 import { api, resolveTeam } from "../api.js";
-import { success, error, printKeyValue } from "../output.js";
+import { success, error, printKeyValue, isJsonMode, printJson } from "../output.js";
+import { apiBaseUrl } from "../runtime.js";
 import { askHidden } from "../prompt.js";
 
 export function registerAuthCommands(program: Command) {
@@ -22,7 +23,8 @@ export function registerAuthCommands(program: Command) {
       try {
         const team = await resolveTeam(apiKey);
         const isTest = isTestKey(apiKey);
-        saveProfile(opts.profile, apiKey, isTest ? "test" : "production");
+        saveProfile(opts.profile, apiKey, isTest ? "test" : "production", apiBaseUrl());
+        if (isJsonMode()) return printJson({ profile: opts.profile, team_id: team?.id ?? null, mode: isTest ? "test" : "live" });
         success(`Autenticado como ${pc.bold(team?.legal_name || team?.brand?.alias || "equipo gigstack")}`);
         if (isTest) console.log(pc.yellow("  Modo prueba (test key)"));
         console.log(pc.dim(`  Perfil "${opts.profile}" guardado en ~/.config/gigstack/credentials.json`));
@@ -50,6 +52,7 @@ export function registerAuthCommands(program: Command) {
 
       try {
         const team = await resolveTeam();
+        if (isJsonMode()) return printJson({ profile: profile.name, team_id: team?.id ?? null, mode: isTestKey(profile.apiKey) ? "test" : "live", team });
         printKeyValue({
           Perfil: profile.name,
           Modo: isTestKey(profile.apiKey) ? pc.yellow("test") : pc.green("producción"),
@@ -59,7 +62,7 @@ export function registerAuthCommands(program: Command) {
           "API Key": profile.apiKey.slice(0, 12) + "..." + profile.apiKey.slice(-4),
         });
       } catch (e: any) {
-        error(e.message);
+        error(e);
       }
     });
 
@@ -83,6 +86,7 @@ export function registerAuthCommands(program: Command) {
     .description("Listar perfiles guardados")
     .action(() => {
       const profiles = listProfiles();
+      if (isJsonMode()) return printJson({ data: profiles });
       if (!profiles.length) { console.log(pc.dim("Sin perfiles. Ejecuta: gigstack login")); return; }
       for (const p of profiles) {
         console.log(`${p.active ? pc.green("●") : pc.dim("○")} ${p.name}`);

@@ -1,8 +1,12 @@
+import { hasJsonInput, sendCompleteBody, withCompleteBody } from "../core-input.js";
+import { registerSupportDocumentCommands } from "./documents.js";
+import { segment, requireConfirmation, readJsonInput } from "../input.js";
+import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import pc from "picocolors";
-import { api } from "../api.js";
+import { api, ApiError } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
@@ -13,6 +17,61 @@ function uid(item: any): string {
 
 export function registerInvoiceCommands(program: Command) {
   const invoices = program.command("invoices").description("Gestionar facturas CFDI");
+  registerSupportDocumentCommands(invoices, "invoices");
+  invoices.command("eom-run").description("Start production global invoicing on month-end before 23:00 Mexico City; accepted is not completed")
+    .option("-y, --yes", "Confirm live global invoicing for the selected team")
+    .action(async opts => {
+      await requireConfirmation(opts.yes, "Start LIVE end-of-month global invoicing for this team? Do not retry an interrupted request automatically.");
+      printJson(await api("POST", "/invoices/eom/run", { body: {} }));
+    });
+
+  const printBatch = (response: any) => {
+    printJson(response);
+    if (["partially_completed", "failed"].includes(response.data?.result) || response.data?.rejected?.length > 0 || response.data?.counts?.failed > 0 || response.data?.counts?.needs_review > 0) process.exitCode = 1;
+  };
+  const batch = invoices.command("batch").description("Submit income invoices and inspect asynchronous outcomes");
+  withCompleteBody(batch.command("create").description("Queue up to 1,000 invoices; preserve the batch header key and each item's idempotency_key"))
+    .requiredOption("--idempotency-key <key>", "Stable caller-saved batch key, reused only with the identical body")
+    .action(async opts => {
+      const body = await readJsonInput(opts);
+      await requireConfirmation(opts.yes, "Queue these invoices with their supplied delivery and automation settings?");
+      printBatch(await api("POST", "/invoices/income/batch", { body, team: opts.team, idempotencyKey: opts.idempotencyKey }));
+    });
+  batch.command("get <id>").description("Read batch progress; partial or failed results exit nonzero")
+    .action(async id => printBatch(await api("GET", `/invoices/income/batch/${segment(id)}`)));
+  batch.command("items <id>").description("Read one page of batch item outcomes, preserving data.next and data.has_more")
+    .option("--limit <n>", "Page size").option("--next <cursor>", "Opaque next cursor").option("--status <status>", "Item status")
+    .action(async (id, opts) => {
+      const query: Record<string, string> = {};
+      for (const key of ["limit", "next", "status"]) if (opts[key] !== undefined) query[key] = opts[key];
+      const response = await api("GET", `/invoices/income/batch/${segment(id)}/items`, { query });
+      printJson(response);
+      if (response.data?.data?.some((item: any) => ["failed", "needs_review"].includes(item.status))) process.exitCode = 1;
+    });
+  invoices.command("errors").description("Read the CFDI error catalog; this is not the team's failed-invoice queue")
+    .option("--code <code>", "Exact CFDI error code").option("--q <text>", "Search code/explanation/solution")
+    .option("--type <type>", "invoice, receiver, sender or unknown").option("--limit <n>", "Page size, maximum 100").option("--page <n>", "Page number")
+    .action(async opts => {
+      const query: Record<string, string> = {};
+      for (const key of ["code", "q", "type", "limit", "page"]) if (opts[key] !== undefined) query[key] = opts[key];
+      printJson(await api("GET", "/invoices/errors", { query }));
+    });
+  withCompleteBody(invoices.command("import-xml").description("Import up to 50 held CFDIs with {files:[{filename,xml|content}]} and preserve per-file outcomes"))
+    .action(async opts => {
+      const body = await readJsonInput(opts);
+      await requireConfirmation(opts.yes, "Import these held CFDI XMLs into the selected team's records?");
+      let response: any;
+      try { response = await api("POST", "/invoices/import", { body, team: opts.team }); }
+      catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 200 || !error.body?.data?.summary) throw error;
+        response = error.body;
+      }
+      printJson(response);
+      if (response.success === false || response.data?.summary?.not_imported > 0) process.exitCode = 1;
+    });
+
+  invoices.command("payment-get <id>").description("Leer CFDI de complemento de pago (tipo P); conserva respuesta completa")
+    .action(async id => printJson(await api("GET", `/invoices/payment/${segment(id)}`)));
 
   withListOpts(
     invoices
@@ -42,7 +101,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -70,10 +129,10 @@ export function registerInvoiceCommands(program: Command) {
           Complementos: i.payment_complements ?? "—",
           Creado: formatDate(i.created_at),
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
-  invoices
+  withCompleteBody(invoices
     .command("create")
     .description("Crear factura de ingreso (CFDI 4.0) — interactivo si no se pasan flags")
     .option("--client <id>", "ID del cliente")
@@ -85,9 +144,10 @@ export function registerInvoiceCommands(program: Command) {
     .option("--series <series>", "Serie")
     .option("--send-email", "Enviar factura por email al cliente")
     .option("--emails <emails>", "Emails adicionales (separados por coma)")
-    .option("--team <id>", "Team ID")
-    .action(async (opts) => {
+    .option("--team <id>", "Team ID"))
+    .action(async (opts, command) => {
       try {
+        if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", `/invoices/income`);
         const interactive = !opts.client && !opts.items;
         let clientId = opts.client;
         let items: any[];
@@ -186,7 +246,7 @@ export function registerInvoiceCommands(program: Command) {
         success(`Factura creada: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
         else console.log(`  Total: ${formatMoney(res.data.total, res.data.currency)}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -204,7 +264,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.attachments?.length) {
           console.log(pc.dim(`  Adjuntos: ${res.data.attachments.join(", ")}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -220,7 +280,7 @@ export function registerInvoiceCommands(program: Command) {
           team: opts.team,
         }));
         success(`Factura ${uuid} cancelada`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -240,7 +300,7 @@ export function registerInvoiceCommands(program: Command) {
             status: i.status || "—",
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -254,7 +314,7 @@ export function registerInvoiceCommands(program: Command) {
         const files = res.data;
         if (files.pdf) console.log(`PDF: ${files.pdf}`);
         if (files.xml) console.log(`XML: ${files.xml}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   invoices
@@ -283,11 +343,32 @@ export function registerInvoiceCommands(program: Command) {
         }
         if (saved.length === 0) error("No se encontraron archivos para esta factura");
         else success(`Descargado: ${saved.join(", ")}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Drafts
   const drafts = invoices.command("drafts").description("Pre-facturas / borradores");
+  drafts.command("get <id>").action(async id => printJson(await api("GET", `/invoices/draft/${segment(id)}`)));
+  withCompleteBody(drafts.command("create").description("Save a draft from its full JSON body"))
+    .action(async (opts, command) => sendCompleteBody(command, opts, "POST", "/invoices/draft"));
+  withCompleteBody(drafts.command("update <id>").description("Replace draft content with the complete intended body; omitted items are cleared"))
+    .action(async (id, opts, command) => sendCompleteBody(command, opts, "PUT", `/invoices/draft/${segment(id)}`));
+  for (const [name, method, suffix] of [["delete", "DELETE", ""], ["preview", "POST", "/preview"]]) {
+    drafts.command(`${name} <id>`).option("-y, --yes", "Confirm this draft operation")
+      .action(async (id, opts) => {
+        const path = `/invoices/draft/${segment(id)}${suffix}`;
+        await requireConfirmation(opts.yes, "Apply this draft operation in the selected team and mode?");
+        printJson(await api(method, path));
+      });
+  }
+  for (const [name, route] of [["credit-note-create", "egress"], ["complement-create", "payment"], ["transfer-create", "transfer"]]) {
+    withCompleteBody(invoices.command(name).description("Create the specified fiscal document from its complete JSON body"))
+      .action(async (opts, command) => sendCompleteBody(command, opts, "POST", `/invoices/${route}`));
+  }
+  invoices.command("credit-note-get <id>").action(async id => printJson(await api("GET", `/invoices/egress/${segment(id)}`)));
+  invoices.command("transfer-get <id>").action(async id => printJson(await api("GET", `/invoices/transfer/${segment(id)}`)));
+  withListOpts(invoices.command("transfers").description("List transfer CFDIs and preserve pagination"))
+    .action(async opts => printJson(await api("GET", "/invoices/transfer", { query: buildListQuery(opts), team: opts.team })));
 
   withListOpts(drafts.command("list").description("Listar borradores"))
     .action(async (opts) => {
@@ -305,7 +386,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   drafts
@@ -317,7 +398,7 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Timbrando borrador…", () => api("POST", `/invoices/draft/${uuid}/stamp`, { team: opts.team }));
         success(`Borrador timbrado: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Credit notes
@@ -337,7 +418,7 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Complements
@@ -359,11 +440,12 @@ export function registerInvoiceCommands(program: Command) {
           })),
         );
         printPaginationHint(res);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Descarga Masiva SAT
   const sat = invoices.command("sat").description("Descarga Masiva SAT — facturas recibidas y emitidas");
+  registerSatControlCommands(sat);
 
   withListOpts(sat.command("list").description("Listar facturas descargadas del SAT"))
     .option("--direction <dir>", "Dirección: issued (emitidas) o received (recibidas)")
@@ -402,7 +484,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.has_more && res.next) {
           console.log(pc.dim(`\n... más resultados. Usa --next ${res.next} para la siguiente página`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -437,7 +519,7 @@ export function registerInvoiceCommands(program: Command) {
           Versión: i.version || "—",
           "No. certificado": i.certificate_number || "—",
         });
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -452,7 +534,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.credit_charged !== undefined) {
           console.log(pc.dim(`  Crédito cobrado: ${res.data.credit_charged ? "sí" : "no"}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -470,12 +552,12 @@ export function registerInvoiceCommands(program: Command) {
         writeFileSync(path, buf);
         if (isJsonMode()) return printJson({ path, bytes: buf.length });
         success(`PDF descargado: ${path}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
     .command("download <uuid>")
-    .description("Descargar PDF de una factura del SAT (el XML solo se expone vía web app)")
+    .description("Descargar PDF de una factura del SAT (usa fetch-xml para XML)")
     .option("-o, --out <dir>", "Directorio de salida", ".")
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
@@ -486,10 +568,10 @@ export function registerInvoiceCommands(program: Command) {
         const buf = Buffer.from(pdfBase64, "base64");
         const path = join(opts.out, `${uuid}.pdf`);
         writeFileSync(path, buf);
-        if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_available: false });
+        if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_included: false, xml_command: "gigstack invoices sat fetch-xml <uuid> --yes --json" });
         success(`PDF descargado: ${path}`);
-        console.log(pc.dim("  Nota: el XML del SAT solo está disponible desde app.gigstack.pro/gastos"));
-      } catch (e: any) { error(e.message); }
+        console.log(pc.dim("  Para XML: gigstack invoices sat fetch-xml <uuid> --yes --json (puede cobrar un crédito)"));
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -525,7 +607,7 @@ export function registerInvoiceCommands(program: Command) {
         } else if (d.status === "active") {
           console.log(pc.dim("→ Descarga Masiva está habilitada. Use 'gigstack invoices sat list' para ver facturas"));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -571,7 +653,7 @@ export function registerInvoiceCommands(program: Command) {
         if (res.data?.type) {
           console.log(pc.dim(`  Tipo: ${res.data.type === "included" ? "incluida en plan" : "add-on"}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   sat
@@ -588,7 +670,7 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Desactivando…", () => api("POST", "/invoices/download/deactivate", { team: opts.team }));
         if (isJsonMode()) return printJson(res);
         success(res.message || "Descarga Masiva desactivada");
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   // Schedule sub-group (read-only + history; saving requires multi-field config — defer to web UI)
@@ -628,7 +710,7 @@ export function registerInvoiceCommands(program: Command) {
           });
           if (d.prodigia.message) console.log(pc.dim(`\n  ${d.prodigia.message}`));
         }
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   schedule
@@ -653,7 +735,7 @@ export function registerInvoiceCommands(program: Command) {
             fecha: formatDate(h.createdAt),
           })),
         );
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 
   schedule
@@ -681,6 +763,6 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Guardando configuración…", () => api("PUT", "/invoices/download/schedule", { body, team: opts.team }));
         if (isJsonMode()) return printJson(res.data);
         success(res.message || "Configuración guardada");
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

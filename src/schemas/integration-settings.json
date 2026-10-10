@@ -1,0 +1,306 @@
+{
+  "providers": [
+    "stripe",
+    "adyen",
+    "paypal",
+    "zettle",
+    "conekta",
+    "openpay",
+    "clip",
+    "clockpms",
+    "pagoralia",
+    "dlocal",
+    "woocommerce",
+    "mercadopago",
+    "mercadolibre",
+    "airtable",
+    "shopify",
+    "bank",
+    "sheets",
+    "netsuite",
+    "whatsapp",
+    "zapier",
+    "whmcs",
+    "hilos",
+    "sat",
+    "sat_download",
+    "factus"
+  ],
+  "settings": {
+    "stripe": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        },
+        "test_only": {
+          "type": "boolean"
+        },
+        "automatic_refunds": {
+          "type": "boolean"
+        },
+        "ppd_flow": {
+          "type": "boolean"
+        },
+        "use_provider_exchange_rate": {
+          "type": "boolean"
+        },
+        "convert_payments_to_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "default_payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{2}$",
+          "maxLength": 2
+        },
+        "customer_balance_payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{2}$",
+          "maxLength": 2
+        },
+        "stripe_payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{2}$",
+          "maxLength": 2
+        }
+      }
+    },
+    "adyen": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        },
+        "test_only": {
+          "type": "boolean"
+        },
+        "ppd_flow": {
+          "type": "boolean"
+        },
+        "use_provider_exchange_rate": {
+          "type": "boolean"
+        },
+        "convert_payments_to_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "paypal": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        },
+        "test_only": {
+          "type": "boolean"
+        },
+        "service_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "payment_form": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{2}$",
+          "maxLength": 2
+        }
+      }
+    },
+    "conekta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "openpay": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "clip": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "clockpms": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pagoralia": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "dlocal": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "woocommerce": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mercadopago": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        }
+      }
+    },
+    "shopify": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_invoicing": {
+          "type": "boolean"
+        },
+        "default_payment_form": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{2}$",
+          "maxLength": 2
+        }
+      }
+    },
+    "bank": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 20
+        },
+        "clabe": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{18}$"
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "holder_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "iban": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 34
+        },
+        "help": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "swift": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 20
+        },
+        "voucher_required": {
+          "type": "boolean"
+        },
+        "account_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "routing_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32
+        }
+      }
+    }
+  }
+}

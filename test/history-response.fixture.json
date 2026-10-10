@@ -1,0 +1,337 @@
+[
+  {
+    "resource_type": "invoices",
+    "resource_id": "invoice_one",
+    "team_id": "team",
+    "livemode": false,
+    "storage_project_id": "gigstackprodev",
+    "document": {
+      "uuid": "UUID",
+      "idempotency_key": "key",
+      "client": {
+        "id": "client_one",
+        "address": {
+          "country": "COL",
+          "street": "Street",
+          "zip": "110111",
+          "city": "Bogota",
+          "state": "Bogota",
+          "exterior": "1",
+          "municipality": "Bogota",
+          "neighborhood": "Centro"
+        },
+        "name": "Client",
+        "phone": null,
+        "email": "client@example.invalid",
+        "bcc": [],
+        "metadata": {
+          "crm": {
+            "id": "C1"
+          }
+        },
+        "is_valid": false,
+        "from": "manual",
+        "legal_name": "Legal Client",
+        "livemode": false,
+        "owner": "person",
+        "tax_id": null,
+        "use": null,
+        "tax_system": null,
+        "team": "team",
+        "created_at": 1,
+        "efos": {
+          "is_valid": true
+        },
+        "defaults": {
+          "keep_full_legal_name": true,
+          "issue_automatic_invoices": true,
+          "issue_invoiceable_receipts": true
+        },
+        "document_type": "31",
+        "organization_type": 1,
+        "tribute_code": "01",
+        "fiscal_responsibilities": [
+          "O-13"
+        ],
+        "dv": "9",
+        "municipality_code": "11001"
+      },
+      "created_at": 12,
+      "currency": "MXN",
+      "exchange_rate": 1,
+      "total": 116,
+      "subtotal": 100,
+      "discount": 0,
+      "taxes": 16,
+      "withholding_taxes": 0,
+      "series": "A",
+      "folio_number": 19,
+      "invoice_type": "I",
+      "use": "G03",
+      "payment_form": "03",
+      "payment_method": "PPD",
+      "payment_conditions": "",
+      "payment_complements": 20,
+      "last_balance": 96,
+      "installments": 2,
+      "livemode": false,
+      "owner": "person",
+      "team": "team",
+      "billing_account": "account",
+      "from": "api",
+      "status": "valid",
+      "date": 1791547200000,
+      "payments": [
+        "payment_one"
+      ],
+      "invoices": [
+        "related_one"
+      ],
+      "addenda": "<extra/>",
+      "exports": "01",
+      "invoice_pdf_notes": "Notes",
+      "global": {
+        "periodicity": "01",
+        "months": "10",
+        "year": 2026
+      },
+      "related_documents": [
+        {
+          "relationship": "01",
+          "documents": [
+            "related_one"
+          ]
+        }
+      ],
+      "complements": [
+        {
+          "type": "pago",
+          "data": "{\"legitimate\":\"data\"}"
+        }
+      ],
+      "cancellation": {
+        "cancelled_at": 21,
+        "requested_by": "",
+        "cancellation_receipt": "",
+        "cancellation_status": "pending",
+        "cancellation_type": "normal",
+        "code": "201",
+        "last_checked": 21,
+        "motive": "02",
+        "requested_at": 20,
+        "substitution_uuid": "SUBSTITUTE"
+      },
+      "stamp": {
+        "sello": "SIGNATURE",
+        "stamp_at": 12,
+        "provider": "Prodigia"
+      },
+      "items": [
+        {
+          "id": "service_one",
+          "taxability": "01",
+          "taxes": [
+            {
+              "base": 100,
+              "rate": "0.16",
+              "type": "IVA",
+              "factor": "Tasa",
+              "withholding": false,
+              "inclusive": false
+            }
+          ],
+          "description": "Service",
+          "product_key": "80141503",
+          "quantity": 1,
+          "sku": "SKU",
+          "unit_price": 100,
+          "discount": 0,
+          "unit_key": "E48",
+          "unit_name": "Servicio",
+          "customs_request": "",
+          "complement": "",
+          "property_tax_account": "123",
+          "third_party": {
+            "legal_name": "Third",
+            "tax_id": "RFC",
+            "tax_system": "601",
+            "zip": "76000"
+          }
+        }
+      ],
+      "metadata": {
+        "order": {
+          "id": "Order1"
+        }
+      },
+      "issuer_info": {
+        "legal_name": "Issuer",
+        "tax_id": "IssuerRFC",
+        "tax_system": "601",
+        "zip": "76000"
+      },
+      "emails": [
+        "example@example.invalid"
+      ],
+      "automations": [],
+      "namespaces": [],
+      "verification_url": "https://verificacfdi.facturaelectronica.sat.gob.mx/",
+      "id": "invoice_one",
+      "files": {
+        "pdf": null,
+        "xml": null
+      }
+    },
+    "file_status": {
+      "pdf": "available",
+      "xml": "unavailable"
+    }
+  },
+  {
+    "resource_type": "receipts",
+    "resource_id": "receipt_one",
+    "team_id": "team",
+    "livemode": false,
+    "storage_project_id": "gigstackprodev",
+    "document": {
+      "client": {
+        "id": "client_one",
+        "address": {
+          "country": "COL",
+          "street": "Street",
+          "zip": "110111",
+          "city": "Bogota",
+          "state": "Bogota",
+          "exterior": "1",
+          "municipality": "Bogota",
+          "neighborhood": "Centro"
+        },
+        "name": "Client",
+        "phone": null,
+        "email": "client@example.invalid",
+        "bcc": [],
+        "metadata": {
+          "crm": {
+            "id": "C1"
+          }
+        },
+        "is_valid": false,
+        "from": "manual",
+        "legal_name": "Legal Client",
+        "livemode": false,
+        "owner": "person",
+        "tax_id": null,
+        "use": null,
+        "tax_system": null,
+        "team": "team",
+        "created_at": 1,
+        "efos": {
+          "is_valid": true
+        },
+        "defaults": {
+          "keep_full_legal_name": true,
+          "issue_automatic_invoices": true,
+          "issue_invoiceable_receipts": true
+        },
+        "document_type": "31",
+        "organization_type": 1,
+        "tribute_code": "01",
+        "fiscal_responsibilities": [
+          "O-13"
+        ],
+        "dv": "9",
+        "municipality_code": "11001"
+      },
+      "currency": "COP",
+      "exchange_rate": 1,
+      "from": "api",
+      "id": "receipt_one",
+      "url": "https://invoicing.gigstack.pro/autofactura?id=receipt_one",
+      "created_at": 12,
+      "invoices": [
+        "invoice_one"
+      ],
+      "items": [
+        {
+          "id": "service_one",
+          "description": "Service",
+          "from": "api",
+          "quantity": 1,
+          "sku": "SKU",
+          "product_key": "80141503",
+          "unit_key": "E48",
+          "unit_name": "Servicio",
+          "unit_price": 100,
+          "taxes": [
+            {
+              "base": 100,
+              "rate": 0.16,
+              "type": "IVA",
+              "factor": "Tasa",
+              "inclusive": false,
+              "withholding": false
+            }
+          ],
+          "team": "team",
+          "created_at": 12,
+          "third_party": {
+            "legal_name": "Third",
+            "tax_id": "RFC",
+            "tax_system": "601",
+            "zip": "76000"
+          },
+          "discount": 5,
+          "item_complement": {
+            "hydrocarbons": {
+              "permit_type": "A",
+              "permit_number": "123",
+              "fuel_code": "01",
+              "fuel_sub_product": "02"
+            }
+          }
+        }
+      ],
+      "livemode": false,
+      "metadata": {
+        "order": "O1"
+      },
+      "owner": "person",
+      "payments": [
+        "payment_one"
+      ],
+      "periodicity": "month",
+      "short_url": "https://gigstack.xyz/one",
+      "status": "pending",
+      "team": "team",
+      "valid_until": 15,
+      "invoice_config": {
+        "serie": "A",
+        "folio": 22,
+        "date": 12,
+        "global": {
+          "periodicity": "01",
+          "months": "10",
+          "year": 2026
+        },
+        "validUntil": 15
+      },
+      "automatic_invoice_error": "None",
+      "payment_form": "03",
+      "files": {
+        "pdf": null,
+        "xml": null
+      },
+      "total": 116,
+      "total_refunded": 0,
+      "subtotal": 100,
+      "taxes": 16,
+      "discount": 5,
+      "withholding_taxes": 2,
+      "idempotency_key": "receipt-key"
+    },
+    "file_status": {
+      "pdf": "unavailable",
+      "xml": "unavailable"
+    }
+  }
+]
