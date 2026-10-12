@@ -1,0 +1,306 @@
+{
+  "bases": {
+    "type": "object",
+    "properties": {
+      "cursor": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "tables": {
+    "type": "object",
+    "properties": {
+      "base_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      }
+    },
+    "required": [
+      "base_id"
+    ],
+    "additionalProperties": false
+  },
+  "webhooks": {
+    "type": "object",
+    "properties": {
+      "cursor": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "mode",
+          "shared"
+        ]
+      },
+      "base_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "expired",
+          "disabled"
+        ]
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "remote": {
+    "type": "object",
+    "properties": {
+      "base_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      }
+    },
+    "required": [
+      "base_id"
+    ],
+    "additionalProperties": false
+  },
+  "register": {
+    "type": "object",
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "base_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      },
+      "table_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      },
+      "field_map": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 250
+        },
+        "minProperties": 1,
+        "maxProperties": 100
+      },
+      "mapping_config": {
+        "type": "object",
+        "properties": {
+          "currencyDefault": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "paymentFormDefault": {
+            "type": "string",
+            "pattern": "^\\d{2}$"
+          },
+          "statusDefault": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "requires_payment_method",
+              "processing",
+              "canceled"
+            ]
+          },
+          "defaultClientEmail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "confirmed": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      }
+    },
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "base_id",
+      "table_id",
+      "field_map",
+      "confirmed"
+    ],
+    "additionalProperties": false
+  },
+  "unregister": {
+    "type": "object",
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "webhook_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[A-Za-z0-9_-]{1,128}$"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "mode",
+          "shared"
+        ]
+      },
+      "recovery_operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "acknowledge_unconfirmed_effects": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      },
+      "acknowledge_shared_connection": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      },
+      "confirmed": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      }
+    },
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "webhook_id",
+      "confirmed"
+    ],
+    "additionalProperties": false
+  },
+  "disconnect": {
+    "type": "object",
+    "properties": {
+      "recovery_operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "acknowledge_unconfirmed_effects": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      },
+      "operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "confirmed": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      },
+      "acknowledge_shared_connection": {
+        "type": "boolean",
+        "enum": [
+          true
+        ]
+      }
+    },
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "confirmed",
+      "acknowledge_shared_connection"
+    ],
+    "additionalProperties": false
+  },
+  "operation": {
+    "type": "object",
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "cursor": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      }
+    },
+    "required": [
+      "operation_id"
+    ],
+    "additionalProperties": false
+  },
+  "reconcile": {
+    "type": "object",
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 250,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      }
+    },
+    "required": [
+      "operation_id"
+    ],
+    "additionalProperties": false
+  }
+}

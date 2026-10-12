@@ -1,9 +1,16 @@
 import pc from "picocolors";
 
 let jsonMode = false;
+let jsonPrinted = false;
+let pendingSuccess: string | undefined;
+const humanLog = console.log.bind(console);
 
 export function setJsonMode(enabled: boolean) {
   jsonMode = enabled;
+  jsonPrinted = false;
+  pendingSuccess = undefined;
+  // Legacy command diagnostics must never contaminate machine-readable stdout.
+  console.log = enabled ? console.error.bind(console) : humanLog;
 }
 
 export function isJsonMode() {
@@ -11,7 +18,9 @@ export function isJsonMode() {
 }
 
 export function printJson(data: any) {
-  console.log(JSON.stringify(data, null, 2));
+  jsonPrinted = true;
+  pendingSuccess = undefined;
+  process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
 
 /** Print a list response as a paginated JSON envelope. Use in every command that
@@ -22,7 +31,7 @@ export function printListJson(res: any, items?: any[]) {
     data: items ?? res?.data ?? [],
     has_more: res?.has_more ?? false,
     next: res?.next ?? null,
-    total: res?.total_results ?? null,
+    total: res?.total_results ?? res?.total ?? null,
   });
 }
 
@@ -57,11 +66,23 @@ export function printKeyValue(data: Record<string, any>) {
 }
 
 export function success(msg: string) {
+  if (jsonMode) { pendingSuccess = msg; return; }
   console.log(pc.green(`✓ ${msg}`));
 }
 
-export function error(msg: string) {
-  console.error(pc.red(`✗ ${msg}`));
+export function error(value: unknown) {
+  process.exitCode = 1;
+  pendingSuccess = undefined;
+  const e = value as any;
+  const message = typeof value === "string" ? value : e?.message ?? "Error desconocido";
+  const cost = e?.body?.data;
+  const details = cost && typeof cost.estimated_cost_mxn === "number" ? { estimated_cost_mxn: cost.estimated_cost_mxn, ...(typeof cost.importable === "number" ? { importable: cost.importable } : {}) } : undefined;
+  if (jsonMode) printJson({ error: { message, ...(details ? { details } : {}), ...(e?.status ? { status: e.status } : {}), ...(e?.code ? { code: e.code } : {}), ...(e?.outcome ? { outcome: e.outcome } : {}) } });
+  else console.error(pc.red(`✗ ${message}`));
+}
+
+export function finishOutput() {
+  if (jsonMode && !jsonPrinted && pendingSuccess) printJson({ success: true, message: pendingSuccess });
 }
 
 export function warn(msg: string) {

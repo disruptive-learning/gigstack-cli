@@ -1,0 +1,930 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "avoid_legal_name_replacer": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "enforce_client_country_taxes": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "global_invoice_disabled": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "automate_complement_for_ppd_invoices": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "automate_partial_payment_complements": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "use_foreign_public_in_usd": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "avoid_receipts": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "cancel_receipts_on_refunds": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "invoice_per_receipt": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "allow_notes_on_self_invoice": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "allow_product_code_on_self_invoice": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "send_invoice_english_pdf": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "default_description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "override_item_description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "invoice_pdf_notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "product_key": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "unit_key": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "unit_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "use": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sku": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "addenda": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "custom_payment_description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "customer_portal_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "force_series": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "avoid_automations_on_currencies": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "uses_on_self_invoice_portal": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "concepts_catalog": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "taxes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "taxes_usd": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "withholding_taxes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "local_taxes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "complements": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "allowed_product_codes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "description"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "periodicity": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "day",
+        "week",
+        "two_weeks",
+        "month",
+        "two_months",
+        null
+      ]
+    },
+    "pdf_language": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "en",
+        "es",
+        null
+      ]
+    },
+    "global_invoicing_monthly_cuts": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "enum": [
+        2,
+        3,
+        4,
+        5,
+        null
+      ]
+    },
+    "eom_ppd_threshold_days": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 31
+    },
+    "limit_days_to_pay": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "payment_reminders": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "before_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "before_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "after_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "after_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "reinvoice": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "window_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "handler": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "credit_note",
+            "cancel_resources",
+            null
+          ]
+        }
+      }
+    },
+    "refunds": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "automatic_refunds": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "current_month_handler": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "credit_note",
+            "cancel_resources",
+            null
+          ]
+        }
+      }
+    },
+    "emails": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "invoices_bcc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "payments_bcc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "receipts_bcc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "avoid_invoice_emails": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "avoid_test_invoice_emails": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "avoid_receipts_emails": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "avoid_foreign_receipts_emails": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invoice_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "invoice_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "complement_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "complement_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "credit_note_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "credit_note_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payment_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payment_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_reminder_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_reminder_subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "email_templates": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "invoices": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "complements": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "credit_notes": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "payments": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "receipts": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "receipt_reminders": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "en": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "default_series": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "income": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "serie": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "complements": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "serie": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "credit_note": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "serie": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "description": "Update only supplied fields. Null clears a field; null groups reset their documented leaves. Empty objects leave that group unchanged. Arrays replace the selected array."
+}

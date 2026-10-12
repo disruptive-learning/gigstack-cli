@@ -1,0 +1,1323 @@
+{
+  "create": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "items",
+      "currency"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total"
+          ],
+          "properties": {
+            "total": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0.000001,
+              "maximum": 1000000000
+            },
+            "hours": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "discount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "feeAdded": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "paymentType": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "fixed",
+                    "hour"
+                  ]
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                }
+              }
+            },
+            "taxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rate",
+                  "type"
+                ],
+                "properties": {
+                  "rate": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "description": "Numeric string accepted by the request validator."
+                      }
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 160
+                  },
+                  "ieps_mode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "base": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000000000000
+                  }
+                }
+              },
+              "maxItems": 30
+            },
+            "localTaxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rate",
+                  "type"
+                ],
+                "properties": {
+                  "rate": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "description": "Numeric string accepted by the request validator."
+                      }
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 160
+                  },
+                  "ieps_mode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "base": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000000000000
+                  }
+                }
+              },
+              "maxItems": 30
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 10000
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "product_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "unit_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "unit_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "fid": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "localId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "team": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "billingAccount": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "timestamp": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "tax_included": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "localChanges": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "livemode": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "disabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "sku": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "property_tax_account": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "customs_keys": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "maxItems": 100
+            },
+            "amounts": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "taxes": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "rate",
+                      "type"
+                    ],
+                    "properties": {
+                      "rate": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "description": "Numeric string accepted by the request validator."
+                          }
+                        ],
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "type": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "factor": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 30
+                      },
+                      "withholding": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "inclusive": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 160
+                      },
+                      "ieps_mode": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 30
+                      },
+                      "base": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 1000000000000
+                      }
+                    }
+                  },
+                  "maxItems": 30
+                },
+                "subtotal": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "total": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "includedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "excludedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "withholdedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                }
+              }
+            },
+            "third_party": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "legal_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 1000
+                },
+                "tax_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                },
+                "tax_system": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                },
+                "zip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 30
+                }
+              }
+            }
+          }
+        },
+        "minItems": 1,
+        "maxItems": 200
+      },
+      "currency": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}$"
+      },
+      "exchange": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 1e-8,
+        "maximum": 1000000000
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 10000
+      },
+      "metadata": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true,
+        "properties": {}
+      },
+      "limitDaysToPay": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 3650
+      },
+      "automations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "from",
+            "ref",
+            "action"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "invoice"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "enum": [
+                "payments"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "enum": [
+                "payments"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "create"
+              ]
+            }
+          }
+        },
+        "maxItems": 1
+      },
+      "custom_method_types": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "enum": [
+                "card",
+                "oxxo",
+                "bank",
+                "customer_balance",
+                "bank_account",
+                "store",
+                "hosted"
+              ]
+            }
+          }
+        },
+        "maxItems": 7
+      }
+    }
+  },
+  "update": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "expected_revision"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "expected_revision": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total"
+          ],
+          "properties": {
+            "total": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0.000001,
+              "maximum": 1000000000
+            },
+            "hours": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "discount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "feeAdded": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "paymentType": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "fixed",
+                    "hour"
+                  ]
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                }
+              }
+            },
+            "taxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rate",
+                  "type"
+                ],
+                "properties": {
+                  "rate": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "description": "Numeric string accepted by the request validator."
+                      }
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 160
+                  },
+                  "ieps_mode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "base": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000000000000
+                  }
+                }
+              },
+              "maxItems": 30
+            },
+            "localTaxes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rate",
+                  "type"
+                ],
+                "properties": {
+                  "rate": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "description": "Numeric string accepted by the request validator."
+                      }
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "factor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "withholding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "inclusive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 160
+                  },
+                  "ieps_mode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "base": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000000000000
+                  }
+                }
+              },
+              "maxItems": 30
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 10000
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "product_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "unit_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "unit_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "fid": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "localId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "team": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "billingAccount": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "timestamp": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "tax_included": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "localChanges": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "livemode": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "disabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "sku": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "property_tax_account": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "customs_keys": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "maxItems": 100
+            },
+            "amounts": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "taxes": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "rate",
+                      "type"
+                    ],
+                    "properties": {
+                      "rate": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "description": "Numeric string accepted by the request validator."
+                          }
+                        ],
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "type": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "factor": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 30
+                      },
+                      "withholding": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "inclusive": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 160
+                      },
+                      "ieps_mode": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 30
+                      },
+                      "base": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 1000000000000
+                      }
+                    }
+                  },
+                  "maxItems": 30
+                },
+                "subtotal": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "total": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "includedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "excludedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                },
+                "withholdedTaxes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000000
+                }
+              }
+            },
+            "third_party": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "legal_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 1000
+                },
+                "tax_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                },
+                "tax_system": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                },
+                "zip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 30
+                }
+              }
+            }
+          }
+        },
+        "minItems": 1,
+        "maxItems": 200
+      },
+      "currency": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}$"
+      },
+      "exchange": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 1e-8,
+        "maximum": 1000000000
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 10000
+      },
+      "metadata": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true,
+        "properties": {}
+      },
+      "limitDaysToPay": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 3650
+      },
+      "automations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "from",
+            "ref",
+            "action"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "invoice"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "enum": [
+                "payments"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "enum": [
+                "payments"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "create"
+              ]
+            }
+          }
+        },
+        "maxItems": 1
+      },
+      "custom_method_types": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "enum": [
+                "card",
+                "oxxo",
+                "bank",
+                "customer_balance",
+                "bank_account",
+                "store",
+                "hosted"
+              ]
+            }
+          }
+        },
+        "maxItems": 7
+      }
+    }
+  },
+  "delete": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation_id",
+      "expected_livemode",
+      "expected_revision"
+    ],
+    "properties": {
+      "operation_id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "expected_livemode": {
+        "type": "boolean"
+      },
+      "expected_revision": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  }
+}

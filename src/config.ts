@@ -2,11 +2,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const CONFIG_DIR = join(homedir(), ".config", "gigstack");
+const CONFIG_DIR = process.env.GIGSTACK_CONFIG_DIR || join(homedir(), ".config", "gigstack");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
 interface Credentials {
-  profiles: Record<string, { apiKey: string; environment: string }>;
+  profiles: Record<string, { apiKey: string; environment: string; baseUrl?: string }>;
   activeProfile: string;
 }
 
@@ -30,9 +30,9 @@ function writeCredentials(creds: Credentials) {
   writeFileSync(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
 }
 
-export function saveProfile(name: string, apiKey: string, environment: string) {
+export function saveProfile(name: string, apiKey: string, environment: string, baseUrl?: string) {
   const creds = readCredentials() || { profiles: {}, activeProfile: name };
-  creds.profiles[name] = { apiKey, environment };
+  creds.profiles[name] = { apiKey, environment, ...(baseUrl ? { baseUrl } : {}) };
   creds.activeProfile = name;
   writeCredentials(creds);
 }
@@ -55,7 +55,7 @@ export function switchProfile(name: string): boolean {
   return true;
 }
 
-export function getActiveProfile(): { name: string; apiKey: string; environment: string } | null {
+export function getActiveProfile(): { name: string; apiKey: string; environment: string; baseUrl?: string } | null {
   const envKey = process.env.GIGSTACK_API_KEY;
   if (envKey) return { name: "env", apiKey: envKey, environment: "production" };
 

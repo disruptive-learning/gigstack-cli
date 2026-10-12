@@ -1,12 +1,30 @@
+import { registerScopedApiKeyCommands } from "./commands/scoped-api-keys.js";
+import { registerResetDeliveryCommands } from "./commands/reset-delivery.js";
+import { registerStripeConnectionCommands } from "./commands/stripe-connection.js";
+import { registerPortalAccessCommands } from "./commands/portal-access.js";
+import { registerPaymentReminderCommands } from "./commands/payment-reminders.js";
+import { registerVendorCommands } from "./commands/vendors.js";
+import { registerPaymentLinkCommands } from "./commands/payment-links.js";
+import { registerAccountInvitationCommands } from "./commands/account-invitations.js";
 import { Command } from "commander";
 import pc from "picocolors";
-import { setJsonMode } from "./output.js";
+import { setJsonMode, error, finishOutput } from "./output.js";
 import { registerAuthCommands } from "./commands/auth.js";
 import { registerClientCommands } from "./commands/clients.js";
 import { registerInvoiceCommands } from "./commands/invoices.js";
 import { registerPaymentCommands } from "./commands/payments.js";
 import { registerServiceCommands } from "./commands/services.js";
 import { registerWebhookCommands } from "./commands/webhooks.js";
+import { registerDocumentCommands } from "./commands/documents.js";
+import { registerLogCommands } from "./commands/logs.js";
+import { registerEmailDomainCommands } from "./commands/email-domain.js";
+import { registerBrandingCommands } from "./commands/branding.js";
+import { registerBillingCommands } from "./commands/billing.js";
+import { registerIntegrationCommands } from "./commands/integrations.js";
+import { registerCredentialCommands } from "./commands/credentials.js";
+import { registerSelfCommands } from "./commands/self.js";
+import { registerAutomationCommands } from "./commands/automation.js";
+import { registerUserCommands } from "./commands/users.js";
 import { registerTeamCommands } from "./commands/teams.js";
 import { registerReceiptCommands } from "./commands/receipts.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
@@ -18,9 +36,12 @@ import { registerExportCommand } from "./commands/export.js";
 import { registerExplainCommand } from "./commands/explain.js";
 import { registerForecastCommand } from "./commands/forecast.js";
 
+import { configureRuntime, apiBaseUrl } from "./runtime.js";
+
 declare const __PKG_VERSION__: string;
 
 const program = new Command();
+setJsonMode(process.argv.includes("--json"));
 
 program
   .name("gigstack")
@@ -28,9 +49,17 @@ program
   .version(__PKG_VERSION__)
   .option("--json", "Salida en formato JSON")
   .option("--team <id>", "Team ID para operaciones multi-equipo")
-  .hook("preAction", (thisCommand) => {
-    const opts = thisCommand.optsWithGlobals();
-    if (opts.json) setJsonMode(true);
+  .option(
+    "--base-url <url>",
+    "URL base del API, incluyendo /v2 (o GIGSTACK_API_BASE_URL)",
+  )
+  .exitOverride()
+  .configureOutput({ writeErr: () => {} })
+  .hook("preAction", (_thisCommand, actionCommand) => {
+    const opts = actionCommand.optsWithGlobals();
+    setJsonMode(Boolean(opts.json));
+    configureRuntime({ team: opts.team, baseUrl: opts.baseUrl });
+    apiBaseUrl();
   });
 
 registerAuthCommands(program);
@@ -41,16 +70,36 @@ registerPayCommand(program);
 registerClientCommands(program);
 registerInvoiceCommands(program);
 registerPaymentCommands(program);
+registerPaymentLinkCommands(program);
+registerVendorCommands(program);
+registerStripeConnectionCommands(program);
+registerPaymentReminderCommands(program);
 registerServiceCommands(program);
 registerWebhookCommands(program);
 registerTeamCommands(program);
+registerPortalAccessCommands(program);
+registerResetDeliveryCommands(program);
+registerUserCommands(program);
+registerAutomationCommands(program);
+registerCredentialCommands(program);
+registerScopedApiKeyCommands(program);
+registerIntegrationCommands(program);
+registerBillingCommands(program);
+registerBrandingCommands(program);
+registerEmailDomainCommands(program);
+registerLogCommands(program);
+registerDocumentCommands(program);
+registerSelfCommands(program);
+registerAccountInvitationCommands(program);
 registerReceiptCommands(program);
 registerCompletionsCommand(program);
 registerExportCommand(program);
 registerExplainCommand(program);
 registerForecastCommand(program);
 
-program.addHelpText("after", `
+program.addHelpText(
+  "after",
+  `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
   ${pc.dim("$")} gigstack context payments               Entender pagos (para agentes)
@@ -73,6 +122,12 @@ ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack explain <id>                    Explicar cualquier recurso
 
 ${pc.bold("Docs:")} https://docs.gigstack.io
-`);
+`,
+);
 
-program.parse();
+try {
+  await program.parseAsync();
+  finishOutput();
+} catch (e: any) {
+  if (e.exitCode !== 0) error(e);
+}

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { api } from "../api.js";
-import { spinner, error, formatDate } from "../output.js";
+import { spinner, error, formatDate, isJsonMode } from "../output.js";
 import { buildListQuery } from "../list-opts.js";
 
 // ─── Column definitions ────────────────────────────────────
@@ -219,7 +219,7 @@ export function registerExportCommand(program: Command) {
 
         const items = await fetchAllPages(sub.endpoint, query, opts.team);
 
-        if (opts.format === "json") {
+        if (isJsonMode() || opts.format === "json") {
           process.stdout.write(JSON.stringify(items, null, 2) + "\n");
         } else {
           // CSV output
@@ -229,7 +229,7 @@ export function registerExportCommand(program: Command) {
           }
         }
       } catch (e: any) {
-        error(e.message);
+        error(e);
         process.exit(1);
       }
     });

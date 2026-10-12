@@ -145,6 +145,6 @@ export function registerPayCommand(program: Command) {
         if (payment.client?.id) console.log(`  Cliente: ${payment.client.id}`);
         if (payment.short_url) console.log(`  Link pago: ${payment.short_url}`);
         console.log(`\n  ${pc.dim("Portal de autofactura enviado a")} ${pc.bold(email)}`);
-      } catch (e: any) { error(e.message); }
+      } catch (e: any) { error(e); }
     });
 }

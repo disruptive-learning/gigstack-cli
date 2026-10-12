@@ -2,12 +2,13 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { api, resolveTeam } from "../api.js";
 import { getActiveProfile, listProfiles, isTestKey } from "../config.js";
-import { formatDate } from "../output.js";
+import { formatDate, isJsonMode, printJson } from "../output.js";
 
-function pass(msg: string) { console.log(pc.green(`  ✓ ${msg}`)); }
-function fail(msg: string) { console.log(pc.red(`  ✗ ${msg}`)); }
+let checks: { status: string; message: string }[] = [];
+function pass(msg: string) { checks.push({ status: "pass", message: msg }); console.log(pc.green(`  ✓ ${msg}`)); }
+function fail(msg: string) { checks.push({ status: "fail", message: msg }); console.log(pc.red(`  ✗ ${msg}`)); }
 function info(msg: string) { console.log(pc.dim(`    ${msg}`)); }
-function warn(msg: string) { console.log(pc.yellow(`  ! ${msg}`)); }
+function warn(msg: string) { checks.push({ status: "warning", message: msg }); console.log(pc.yellow(`  ! ${msg}`)); }
 
 export function registerDoctorCommand(program: Command) {
   program
@@ -16,6 +17,7 @@ export function registerDoctorCommand(program: Command) {
     .action(async () => {
       console.log(pc.bold("\ngigstack doctor\n"));
       let allGood = true;
+      checks = [];
 
       // 1. Check Node version
       const nodeVersion = process.version;
@@ -138,6 +140,8 @@ export function registerDoctorCommand(program: Command) {
 }
 
 function printSummary(allGood: boolean) {
+  if (!allGood) process.exitCode = 1;
+  if (isJsonMode()) return printJson({ ok: allGood, checks });
   console.log();
   if (allGood) {
     console.log(pc.green(pc.bold("Todo en orden. Tu CLI está listo.")));
