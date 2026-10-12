@@ -1,7 +1,7 @@
 {
   "name": "gigstack",
-  "version": "0.3.1",
-  "description": "gigstack CLI \u2014 facturaci\u00f3n electr\u00f3nica desde tu terminal",
+  "version": "0.4.0",
+  "description": "gigstack CLI — facturación electrónica desde tu terminal",
   "type": "module",
   "bin": {
     "gigstack": "dist/cli.mjs"
