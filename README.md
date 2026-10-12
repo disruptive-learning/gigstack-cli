@@ -201,9 +201,7 @@ gigstack clients create                # Create (interactive)
 gigstack clients update <id>           # Update (interactive or flags)
 gigstack clients search "ACME"         # Search by name, RFC, or email
 gigstack clients validate <id>         # Validate fiscal data against SAT
-gigstack clients portal                # Generate customer portal link (interactive)
-gigstack clients portal --email cli@co.com  # By email
-gigstack clients portal --id client_abc     # By client ID
+gigstack portal-access customer prepare team_123 --data '{"operation_id":"SAVED_UUID","client_id":"client_abc"}'  # Customer portal access, reviewed in the browser
 gigstack clients delete <id>           # Delete
 
 # Create with flags
@@ -582,7 +580,6 @@ gigstack teams series list team_123 --json
 gigstack teams series create team_123 --data '{"series":"A","live":0,"test":0}' --json
 gigstack teams series update team_123 A --file folios.json --json
 gigstack teams onboarding-url team_123 --yes --json
-gigstack teams portal-token team_123 --expires-in 1h --json
 gigstack teams sat-connection team_123 --cert-file csd.cer --key-file csd.key --password-file csd-password.txt --json
 gigstack teams sign-manifest team_123 --file manifest.json --yes --json
 gigstack teams delete team_123 --yes --json
@@ -590,8 +587,10 @@ gigstack teams delete team_123 --yes --json
 
 `sign-manifest` takes `key` and `cert` as base64 strings and `password` in the
 input object. CSD upload sends multipart certificate/key files and preserves
-password whitespace, removing only a final line ending. Portal tokens and
-onboarding URLs should be handled as credentials. Team deletion is a scheduled
+password whitespace, removing only a final line ending. Onboarding URLs should
+be handled as credentials. `teams portal-token` and `clients portal` are retired
+in the CLI: use `portal-access invoices|customer prepare`, which issues no
+credential to the CLI and is approved by a person in the browser. Team deletion is a scheduled
 server operation, subject to its resource/integration eligibility checks.
 
 ### Members and invitations
@@ -680,7 +679,6 @@ gigstack users list --team team_123 --json
 gigstack users get user_456 --team team_123 --json
 gigstack users create --file managed-user.json --team team_123 --json
 gigstack users update user_456 --data '{"first_name":"Ana","company_role":"Contabilidad"}' --team team_123 --json
-gigstack users reset-password user_456 --team team_123 --json
 gigstack users issue-session user_456 --team team_123 --operation-id SAVED_UUID --json
 gigstack users delete user_456 --team team_123 --yes --json
 gigstack webhooks get webhook_123 --team team_123 --json
@@ -697,8 +695,12 @@ does not claim that capability.
 `users create` accepts the v2 user fields: `email`, `first_name`, `last_name`,
 `phone`, `company_role`, `address`, `auto_join` and `role` (`admin`, `editor`,
 `viewer`). `users update` cannot change reserved email or membership fields.
-`reset-password` sends an email. `issue-session` (also named `login-link` for
-compatibility) prepares an owner-reviewed session approval and returns no bearer.
+`users reset-password` is retired (the server answers 410
+`reset_delivery_operation_required`); use the `password-reset` operations below.
+`issue-session` (also named `login-link` for compatibility) prepares an
+owner-reviewed session approval and returns no bearer. The CLI never calls the
+legacy `POST /v2/users/login-link` route, which the server keeps open for one
+release for the web app only and refuses for scoped keys.
 User deletion follows the server's ownership/resource checks.
 
 ### SAT credentials, request jobs and XML downloads
@@ -1370,14 +1372,13 @@ performed through CLI arguments. Unknown outcomes retain safe receipt metadata
 and exit 1. No command prints a reset link, recipient or reviewer challenge.
 Provider acceptance is neither delivery nor password change. Reset affects the
 global login even in test mode; an earlier code may remain valid and recovery
-may send another email. These are offline-verified adapters; route mounting and
-legacy `users reset-password` retirement require the coordinated backend/browser
-cutover.
+may send another email.
 
-The coordinated reset source cutover now makes legacy `users reset-password`
-refuse locally with `reset_delivery_operation_required`, before any HTTP/email
-effect. Use the six `password-reset` actions above. Release with the paired
-backend/browser changes; offline tests do not establish live availability.
+Legacy `users reset-password` refuses locally with
+`reset_delivery_operation_required`, before any HTTP/email effect; the server
+answers `POST /v2/users/reset-password/{id}` with the same code (410). Use the six
+`password-reset` actions above. Recovery review, execution and private status are
+browser-only and are not exposed by the public gateway.
 ### Stripe connection workflow
 
 ```bash
@@ -1442,12 +1443,21 @@ untouched. Preserve the UUID and inspect state after a timeout; never automatica
 rotate again. Migrate and verify one integration at a time before deliberately
 revoking its old credential.
 
-The first scoped catalog permits business reads (including client reads) and
-service CRUD. Client mutations, fiscal issuance/cancellation, refunds, automation,
-team/user administration and credential lifecycle are not grantable. Client writes
-can trigger downstream Stripe/fiscal effects whose scope proof is not yet covered.
-Unknown/unreviewed routes return `scoped_action_unavailable`; existing legacy
-credentials retain their existing behavior. Use the policy catalog's exact IDs.
+The catalog returned by `scoped-api-keys policy` lists every grantable operation
+(162, in 15 groups): business operations (clients, services, invoices, payments
+and links, receipts, retentions, documents, catalogs, webhooks and logs), SAT
+bulk-download jobs, listing/pausing/publishing journeys, and the operations the
+public gateway already exposed. The `account_admin` group (users, login links,
+team create/delete, members, onboarding URL, portal token) is marked sensitive:
+holding it amounts to unrestricted access. Never grantable: credential management
+(`/api-keys`), fiscal credentials (e.firma/PFX, SAT connection, manifest signing),
+account setup a person does in the app (journey building, Google Sheets, provider
+connections, invitations, ownership transfer, vendor teams) and flows a person must
+approve (portal operations, payment-reminder recovery, webhook secret entry).
+Effects a request body asks for (for example embedded client `auto_create`) need
+their own grant. Unknown/unreviewed routes return `scoped_action_unavailable`;
+existing legacy credentials retain their existing behavior. Use the policy
+catalog's exact IDs.
 
 The current personal billing owner can explicitly revoke account-scoped keys across
 **both** live/test modes. Delegates/managers/API keys cannot use this operation;

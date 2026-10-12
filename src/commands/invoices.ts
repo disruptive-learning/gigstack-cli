@@ -699,16 +699,18 @@ export function registerInvoiceCommands(program: Command) {
           "Última ejecución": s?.lastRunAt ? formatDate(s.lastRunAt) : "—",
           "Status última corrida": s?.lastRunStatus || "—",
         });
-        if (d.prodigia) {
+        // `sync_status` is the current field; `prodigia` is the deprecated alias older servers return.
+        const sync = d.sync_status ?? d.prodigia;
+        if (sync) {
           console.log("");
-          console.log(pc.bold("Sincronización Prodigia/SAT:"));
+          console.log(pc.bold("Sincronización con el SAT:"));
           printKeyValue({
-            "Sincronizado": d.prodigia.synced ? "sí" : "no",
-            "Desde": d.prodigia.sync_from || "—",
-            "Última sync": d.prodigia.last_sync || "—",
-            "Tope mensual": d.prodigia.monthly_cap ?? "—",
+            "Sincronizado": sync.synced ? "sí" : "no",
+            "Desde": sync.sync_from || "—",
+            "Última sync": sync.last_sync || "—",
+            "Tope mensual": sync.monthly_cap ?? "—",
           });
-          if (d.prodigia.message) console.log(pc.dim(`\n  ${d.prodigia.message}`));
+          if (sync.message) console.log(pc.dim(`\n  ${sync.message}`));
         }
       } catch (e: any) { error(e); }
     });
