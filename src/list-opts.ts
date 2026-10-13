@@ -45,7 +45,7 @@ export function printPaginationHint(res: any) {
   }
 }
 
-function parseDate(input: string, isEnd = false): string {
+export function parseDate(input: string, isEnd = false): string {
   const trimmed = input.trim().toLowerCase();
   const relMatch = trimmed.match(/^(\d+)d$/);
   if (relMatch) {
