@@ -98,6 +98,45 @@ export async function api(
 }
 
 /**
+ * POST to a public route (agent sandbox sign-up and claim). Never sends a
+ * credential: these routes take none, and a saved key must not leave the
+ * machine for a request that does not need it. Same base URL, timeout,
+ * redirect and error handling as {@link api}.
+ */
+export async function publicApi(path: "/auth/sandbox" | "/auth/sandbox/claim", body: Record<string, unknown>, opts?: { idempotencyKey?: string }) {
+  if (opts?.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
+  const timeout = Number(process.env.GIGSTACK_API_TIMEOUT_MS ?? 30000);
+  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 300000) throw new Error("GIGSTACK_API_TIMEOUT_MS debe estar entre 1 y 300000");
+  let res: Response;
+  try {
+    res = await fetch(`${apiBaseUrl()}${path}`, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(timeout),
+      headers: {
+        "Content-Type": "application/json",
+        ...(opts?.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (e: any) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") {
+      throw Object.assign(new Error("Tiempo de espera agotado; el resultado de la operación es desconocido. Consulta el estado antes de repetirla."), { code: "request_timeout", outcome: "unknown" });
+    }
+    if (e.code === "ENOTFOUND" || e.cause?.code === "ENOTFOUND") throw new Error("Sin conexión a internet. Verifica tu red.");
+    throw new Error(`Error de conexión: ${e.message}`);
+  }
+  let text: string;
+  try { text = await res.text(); }
+  catch { throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: "unknown" }); }
+  let data: any;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch { throw new ApiError(res.status, { error: { code: "invalid_response", message: "El API devolvió una respuesta no JSON" } }); }
+  if (!res.ok || data?.success === false) throw new ApiError(res.status, data);
+  return { status: res.status, body: data };
+}
+
+/**
  * Resolves the primary team for the current API key.
  * First checks if the JWT contains a team ID and tries GET /teams/{id}.
  * A supplied --team is authoritative. An ambiguous team list requires selection.

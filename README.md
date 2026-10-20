@@ -88,6 +88,28 @@ gigstack profiles                     # List saved profiles
 gigstack switch <profile>             # Switch active profile
 ```
 
+### Sandbox sign-up (no account yet)
+
+An agent or a person without a gigstack account can create a **test-mode-only, free** sandbox
+account. No login is needed and no credential is sent.
+
+```bash
+gigstack signup --sandbox --email you@yourcompany.com --name "Your Business"
+gigstack signup claim --team <team_id> --code <6-digit code>
+```
+
+- Use the person's own email: a 6-digit claim code is sent there. The sandbox expires 7 days
+  after creation if it is not claimed.
+- The test key is returned only once. It is saved to the profile `sandbox` (change it with
+  `--profile <name>`), which becomes the active profile, the same way `gigstack login` stores
+  keys. In a terminal you are asked first; without one it is saved. `--no-save` prints it once
+  instead. An existing profile name is refused before any request is sent.
+- Until claimed, the key only works on test data. Live invoicing needs the person: claim, set a
+  password from the email they receive, then go live at app.gigstack.pro.
+- If the outcome is uncertain (timeout, 5xx), retry with the reported `--idempotency-key`, never
+  a new one. Signing up again with the same email re-sends the claim code.
+- The API answers `404` until the operator enables sandbox sign-up.
+
 ### Multiple profiles
 
 ```bash
