@@ -55,7 +55,7 @@ export function registerReceiptCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (id, opts) => {
       try {
-        const res = await spin("Timbrando recibo…", () => api("POST", `/receipts/${id}/stamp`, { team: opts.team }));
+        const res = await spin("Timbrando recibo…", () => api("POST", `/receipts/${segment(id)}/stamp`, { team: opts.team }));
         success(`Recibo timbrado: ${res.data.id}`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }

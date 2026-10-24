@@ -78,7 +78,7 @@ export function registerClientCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (id, opts) => {
       try {
-        const res = await api("GET", `/clients/${id}`, { team: opts.team });
+        const res = await api("GET", `/clients/${segment(id)}`, { team: opts.team });
         const c = res.data;
         if (isJsonMode()) return printJson(c);
         printKeyValue({
@@ -158,7 +158,7 @@ export function registerClientCommands(program: Command) {
           if (opts.zip) body.address = { zip: opts.zip };
           if (opts.use) body.use = opts.use;
         } else {
-          const current = await spin("Cargando cliente…", () => api("GET", `/clients/${id}`, { team: opts.team }));
+          const current = await spin("Cargando cliente…", () => api("GET", `/clients/${segment(id)}`, { team: opts.team }));
           const c = current.data;
           console.log(pc.dim(`Editando: ${c.legal_name || c.name} (${c.tax_id || "sin RFC"})\n`));
           console.log(pc.dim("Deja vacío para mantener el valor actual.\n"));
@@ -178,7 +178,7 @@ export function registerClientCommands(program: Command) {
 
         if (Object.keys(body).length === 0) { console.log(pc.dim("Sin cambios")); return; }
 
-        const res = await spin("Actualizando cliente…", () => api("PUT", `/clients/${id}`, { body, team: opts.team }));
+        const res = await spin("Actualizando cliente…", () => api("PUT", `/clients/${segment(id)}`, { body, team: opts.team }));
         success(`Cliente ${id} actualizado`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }
@@ -210,7 +210,7 @@ export function registerClientCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (id, opts) => {
       try {
-        const res = await spin("Validando contra el SAT…", () => api("POST", `/clients/validate/${id}`, { team: opts.team }));
+        const res = await spin("Validando contra el SAT…", () => api("POST", `/clients/validate/${segment(id)}`, { team: opts.team }));
         success("Validación completada");
         if (isJsonMode()) printJson(res.data);
         else printKeyValue(res.data);
@@ -232,9 +232,11 @@ export function registerClientCommands(program: Command) {
     .command("delete <id>")
     .description("Eliminar un cliente")
     .option("--team <id>", "Team ID")
+    .option("-y, --yes", "Confirmar la eliminación (requerido en modo no interactivo)")
     .action(async (id, opts) => {
       try {
-        await api("DELETE", `/clients/${id}`, { team: opts.team });
+        await requireConfirmation(opts.yes, `¿Eliminar el cliente ${id} en el equipo/modo seleccionado? Esta acción es irreversible.`);
+        await api("DELETE", `/clients/${segment(id)}`, { team: opts.team });
         success(`Cliente ${id} eliminado`);
       } catch (e: any) { error(e); }
     });

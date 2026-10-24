@@ -1,6 +1,8 @@
 import { Command } from "commander";
 import pc from "picocolors";
+import { randomUUID } from "node:crypto";
 import { api } from "../api.js";
+import { operationId } from "../operation-journal.js";
 import { printJson, success, error, isJsonMode, formatMoney, spin } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 
@@ -21,6 +23,7 @@ export function registerPayCommand(program: Command) {
     .option("--product-key <key>", "Clave producto SAT", "84111506")
     .option("--unit-key <key>", "Clave unidad SAT", "E48")
     .option("--metadata <json>", "Metadata JSON adicional")
+    .option("--operation-id <uuid>", "UUID v4 estable de este pago; reúsalo para reintentar sin duplicar el cargo")
     .option("--stdin", "Leer input desde stdin (JSON)")
     .option("--team <id>", "Team ID")
     .action(async (opts) => {
@@ -49,6 +52,7 @@ export function registerPayCommand(program: Command) {
           opts.automation = input.automation || opts.automation;
           opts.productKey = input.product_key || opts.productKey;
           opts.unitKey = input.unit_key || opts.unitKey;
+          opts.operationId = input.operation_id || opts.operationId;
           if (input.metadata) opts.metadata = JSON.stringify(input.metadata);
         }
         // Flag mode
@@ -118,6 +122,20 @@ export function registerPayCommand(program: Command) {
           item.taxes = [{ type: "IVA", rate: 0.16, factor: "Tasa", withholding: false }];
         }
 
+        // Derive a STABLE idempotency key from a caller-persisted operation id so a
+        // retry of the same intended payment presents the same key and cannot
+        // register a duplicate. Non-interactive/agent callers must supply one; an
+        // interactive run mints and displays one for the caller to persist and reuse.
+        let idempotencyKey: string;
+        if (opts.operationId) {
+          idempotencyKey = operationId(opts.operationId);
+        } else if (process.stdin.isTTY && !isJsonMode()) {
+          idempotencyKey = randomUUID();
+          console.error(pc.dim(`operation-id: ${idempotencyKey} — guárdalo y reúsalo con --operation-id para reintentar este pago sin duplicarlo.`));
+        } else {
+          throw new Error("--operation-id es requerido (UUID v4 estable). Genera uno, guárdalo y reúsalo para reintentar el mismo pago sin duplicarlo.");
+        }
+
         // Build request body
         const body: any = {
           client,
@@ -125,7 +143,7 @@ export function registerPayCommand(program: Command) {
           currency: opts.currency,
           payment_form: paymentForm,
           automation_type: opts.automation,
-          idempotency_key: `cli_${Date.now()}`,
+          idempotency_key: idempotencyKey,
         };
 
         if (opts.metadata) {

@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
+import { segment } from "../input.js";
 import { printJson, printKeyValue, error, isJsonMode, formatMoney, formatDate, spin, warn } from "../output.js";
 
 // ─── ID type detection ──────────────────────────────────────
@@ -21,27 +22,27 @@ function detectType(id: string): EntityType | null {
 // ─── Fetchers ───────────────────────────────────────────────
 
 async function fetchInvoice(id: string, team?: string) {
-  const res = await api("GET", `/invoices/income/${id}`, { team });
+  const res = await api("GET", `/invoices/income/${segment(id)}`, { team });
   return { type: "invoice" as const, data: res.data };
 }
 
 async function fetchPayment(id: string, team?: string) {
-  const res = await api("GET", `/payments/${id}`, { team });
+  const res = await api("GET", `/payments/${segment(id)}`, { team });
   return { type: "payment" as const, data: res.data };
 }
 
 async function fetchReceipt(id: string, team?: string) {
-  const res = await api("GET", `/receipts/${id}`, { team });
+  const res = await api("GET", `/receipts/${segment(id)}`, { team });
   return { type: "receipt" as const, data: res.data };
 }
 
 async function fetchClient(id: string, team?: string) {
-  const res = await api("GET", `/clients/${id}`, { team });
+  const res = await api("GET", `/clients/${segment(id)}`, { team });
   return { type: "client" as const, data: res.data };
 }
 
 async function fetchService(id: string, team?: string) {
-  const res = await api("GET", `/services/${id}`, { team });
+  const res = await api("GET", `/services/${segment(id)}`, { team });
   return { type: "service" as const, data: res.data };
 }
 

@@ -4,7 +4,7 @@ import { segment, requireConfirmation, readJsonInput } from "../input.js";
 import { registerSatControlCommands } from "./sat-controls.js";
 import { Command } from "commander";
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { resolve, sep } from "node:path";
 import pc from "picocolors";
 import { api, ApiError } from "../api.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
@@ -13,6 +13,26 @@ import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.
 
 function uid(item: any): string {
   return item.uuid ? item.uuid.slice(0, 8) + "…" : item.id ? item.id.slice(0, 12) + "…" : "—";
+}
+
+/**
+ * Write a downloaded document to `<outDir>/<uuid><suffix>` safely:
+ * the uuid must be a plain identifier (no path separators or `..`), the final
+ * path is verified to stay inside the intended directory, and the file is opened
+ * exclusively (`wx`) so a pre-existing file is never silently overwritten.
+ */
+function writeDownload(outDir: string, uuid: string, suffix: string, buf: Buffer): string {
+  if (!/^[A-Za-z0-9_-]{1,160}$/.test(uuid)) throw new Error("UUID inválido para nombre de archivo de descarga");
+  const dir = resolve(outDir);
+  const target = resolve(dir, `${uuid}${suffix}`);
+  if (target !== dir && !target.startsWith(dir + sep)) throw new Error("La ruta de descarga queda fuera del directorio --out");
+  try {
+    writeFileSync(target, buf, { flag: "wx", mode: 0o600 });
+  } catch (e: any) {
+    if (e?.code === "EEXIST") throw new Error(`El archivo ya existe y no se sobrescribe: ${target}`);
+    throw e;
+  }
+  return target;
 }
 
 export function registerInvoiceCommands(program: Command) {
@@ -110,7 +130,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await api("GET", `/invoices/income/${uuid}`, { team: opts.team });
+        const res = await api("GET", `/invoices/income/${segment(uuid)}`, { team: opts.team });
         const i = res.data;
         if (isJsonMode()) return printJson(i);
         printKeyValue({
@@ -157,7 +177,7 @@ export function registerInvoiceCommands(program: Command) {
 
           if (clientQuery.startsWith("client_") || clientQuery.match(/^[a-zA-Z0-9_-]{10,}$/)) {
             try {
-              const directRes = await spin("Buscando cliente…", () => api("GET", `/clients/${clientQuery}`, { team: opts.team }));
+              const directRes = await spin("Buscando cliente…", () => api("GET", `/clients/${segment(clientQuery)}`, { team: opts.team }));
               if (directRes.data) {
                 clientId = directRes.data.id;
                 const c = directRes.data;
@@ -258,7 +278,7 @@ export function registerInvoiceCommands(program: Command) {
       try {
         const body: any = {};
         if (opts.to) body.emails = opts.to.split(",").map((e: string) => e.trim());
-        const res = await spin("Enviando factura por email…", () => api("POST", `/invoices/${uuid}/send`, { body, team: opts.team }));
+        const res = await spin("Enviando factura por email…", () => api("POST", `/invoices/${segment(uuid)}/send`, { body, team: opts.team }));
         if (isJsonMode()) return printJson(res.data);
         success(`Email enviado a: ${(res.data?.recipients || []).join(", ")}`);
         if (res.data?.attachments?.length) {
@@ -273,9 +293,11 @@ export function registerInvoiceCommands(program: Command) {
     .requiredOption("--motive <code>", "Motivo de cancelación (01, 02, 03, 04)")
     .option("--replacement <uuid>", "UUID de factura de reemplazo (para motivo 01)")
     .option("--team <id>", "Team ID")
+    .option("-y, --yes", "Confirmar la cancelación (requerido en modo no interactivo)")
     .action(async (uuid, opts) => {
       try {
-        await spin("Cancelando factura…", () => api("DELETE", `/invoices/${uuid}`, {
+        await requireConfirmation(opts.yes, `¿Cancelar la factura ${uuid} (motivo ${opts.motive}) en el equipo/modo seleccionado? Esta acción es irreversible.`);
+        await spin("Cancelando factura…", () => api("DELETE", `/invoices/${segment(uuid)}`, {
           body: { motive: opts.motive, replacement: opts.replacement },
           team: opts.team,
         }));
@@ -309,7 +331,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await api("GET", `/invoices/${uuid}/files`, { team: opts.team });
+        const res = await api("GET", `/invoices/${segment(uuid)}/files`, { team: opts.team });
         if (isJsonMode()) return printJson(res.data);
         const files = res.data;
         if (files.pdf) console.log(`PDF: ${files.pdf}`);
@@ -324,22 +346,18 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await spin("Obteniendo archivos…", () => api("GET", `/invoices/${uuid}/files`, { team: opts.team }));
+        const res = await spin("Obteniendo archivos…", () => api("GET", `/invoices/${segment(uuid)}/files`, { team: opts.team }));
         const files = res.data;
         const saved: string[] = [];
         if (files.pdf) {
           const pdfRes = await spin("Descargando PDF…", () => fetch(files.pdf));
           const buf = Buffer.from(await pdfRes.arrayBuffer());
-          const path = join(opts.out, `${uuid}.pdf`);
-          writeFileSync(path, buf);
-          saved.push(path);
+          saved.push(writeDownload(opts.out, uuid, ".pdf", buf));
         }
         if (files.xml) {
           const xmlRes = await spin("Descargando XML…", () => fetch(files.xml));
           const buf = Buffer.from(await xmlRes.arrayBuffer());
-          const path = join(opts.out, `${uuid}.xml`);
-          writeFileSync(path, buf);
-          saved.push(path);
+          saved.push(writeDownload(opts.out, uuid, ".xml", buf));
         }
         if (saved.length === 0) error("No se encontraron archivos para esta factura");
         else success(`Descargado: ${saved.join(", ")}`);
@@ -395,7 +413,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await spin("Timbrando borrador…", () => api("POST", `/invoices/draft/${uuid}/stamp`, { team: opts.team }));
+        const res = await spin("Timbrando borrador…", () => api("POST", `/invoices/draft/${segment(uuid)}/stamp`, { team: opts.team }));
         success(`Borrador timbrado: ${res.data.uuid || res.data.id}`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }
@@ -493,7 +511,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await api("GET", `/invoices/sat/${uuid}`, { team: opts.team });
+        const res = await api("GET", `/invoices/sat/${segment(uuid)}`, { team: opts.team });
         const i = res.data;
         if (isJsonMode()) return printJson(i);
         printKeyValue({
@@ -528,7 +546,7 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await spin("Reintentando descarga del XML…", () => api("POST", `/invoices/sat/${uuid}/retry-xml`, { team: opts.team }));
+        const res = await spin("Reintentando descarga del XML…", () => api("POST", `/invoices/sat/${segment(uuid)}/retry-xml`, { team: opts.team }));
         if (isJsonMode()) return printJson(res);
         success(res.message || "XML descargado correctamente");
         if (res.data?.credit_charged !== undefined) {
@@ -544,12 +562,11 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${uuid}/pdf`, { team: opts.team }));
+        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${segment(uuid)}/pdf`, { team: opts.team }));
         const pdfBase64 = res.pdf;
         if (!pdfBase64) { error("La respuesta no contiene PDF"); return; }
         const buf = Buffer.from(pdfBase64, "base64");
-        const path = join(opts.out, `${uuid}.pdf`);
-        writeFileSync(path, buf);
+        const path = writeDownload(opts.out, uuid, ".pdf", buf);
         if (isJsonMode()) return printJson({ path, bytes: buf.length });
         success(`PDF descargado: ${path}`);
       } catch (e: any) { error(e); }
@@ -562,12 +579,11 @@ export function registerInvoiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (uuid, opts) => {
       try {
-        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${uuid}/pdf`, { team: opts.team }));
+        const res = await spin("Generando PDF…", () => api("POST", `/invoices/sat/${segment(uuid)}/pdf`, { team: opts.team }));
         const pdfBase64 = res.pdf;
         if (!pdfBase64) { error("La respuesta no contiene PDF"); return; }
         const buf = Buffer.from(pdfBase64, "base64");
-        const path = join(opts.out, `${uuid}.pdf`);
-        writeFileSync(path, buf);
+        const path = writeDownload(opts.out, uuid, ".pdf", buf);
         if (isJsonMode()) return printJson({ path, bytes: buf.length, xml_included: false, xml_command: "gigstack invoices sat fetch-xml <uuid> --yes --json" });
         success(`PDF descargado: ${path}`);
         console.log(pc.dim("  Para XML: gigstack invoices sat fetch-xml <uuid> --yes --json (puede cobrar un crédito)"));
