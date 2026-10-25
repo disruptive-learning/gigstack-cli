@@ -17,6 +17,30 @@ export function isJsonMode() {
   return jsonMode;
 }
 
+// ─── Terminal output sanitization ───────────────────────────
+//
+// API-controlled strings (client names, service descriptions, server error
+// messages, payment URLs) are rendered to the terminal in human mode. Without
+// sanitization a malicious value can carry ANSI/OSC escape sequences — an
+// OSC 52 clipboard write, a CSI 2J screen clear, or arbitrary control
+// characters — that the terminal emulator interprets, enabling clipboard
+// hijack and output spoofing. This helper strips those sequences while leaving
+// normal printable/unicode text (accents, emoji, currency symbols) intact.
+// --json output is unaffected because JSON.stringify escapes these bytes.
+//
+// Alternatives, in order:
+//   1. OSC / DCS / PM / APC / SOS strings: ESC ] P X ^ _ … up to a BEL, an ST
+//      (ESC \\), or end of string.
+//   2. CSI sequences: ESC [ params intermediates final.
+//   3. Any residual bare ESC byte and the C0/C1 control range (includes DEL).
+// eslint-disable-next-line no-control-regex
+const TERMINAL_ESCAPE_RE =
+  /\u001b[\]PX^_][\s\S]*?(?:\u0007|\u001b\\|$)|\u001b\[[0-?]*[ -/]*[@-~]|[\u0000-\u001f\u007f-\u009f]/g;
+
+export function sanitizeTerminal(value: unknown): string {
+  return String(value ?? "").replace(TERMINAL_ESCAPE_RE, "");
+}
+
 export function printJson(data: any) {
   jsonPrinted = true;
   pendingSuccess = undefined;
@@ -44,7 +68,7 @@ export function printTable(rows: Record<string, any>[], columns?: string[]) {
 
   const cols = columns || Object.keys(rows[0]);
   const widths = cols.map((c) =>
-    Math.max(c.length, ...rows.map((r) => String(r[c] ?? "").length))
+    Math.max(c.length, ...rows.map((r) => sanitizeTerminal(r[c] ?? "").length))
   );
 
   const header = cols.map((c, i) => pc.bold(c.padEnd(widths[i]))).join("  ");
@@ -53,7 +77,7 @@ export function printTable(rows: Record<string, any>[], columns?: string[]) {
   console.log(header);
   console.log(pc.dim(separator));
   for (const row of rows) {
-    console.log(cols.map((c, i) => String(row[c] ?? "").padEnd(widths[i])).join("  "));
+    console.log(cols.map((c, i) => sanitizeTerminal(row[c] ?? "").padEnd(widths[i])).join("  "));
   }
 }
 
@@ -61,13 +85,13 @@ export function printKeyValue(data: Record<string, any>) {
   if (jsonMode) return printJson(data);
   const maxKey = Math.max(...Object.keys(data).map((k) => k.length));
   for (const [k, v] of Object.entries(data)) {
-    console.log(`${pc.bold(k.padEnd(maxKey))}  ${v}`);
+    console.log(`${pc.bold(k.padEnd(maxKey))}  ${sanitizeTerminal(v)}`);
   }
 }
 
 export function success(msg: string) {
   if (jsonMode) { pendingSuccess = msg; return; }
-  console.log(pc.green(`✓ ${msg}`));
+  console.log(pc.green(`✓ ${sanitizeTerminal(msg)}`));
 }
 
 export function error(value: unknown) {
@@ -78,7 +102,7 @@ export function error(value: unknown) {
   const cost = e?.body?.data;
   const details = cost && typeof cost.estimated_cost_mxn === "number" ? { estimated_cost_mxn: cost.estimated_cost_mxn, ...(typeof cost.importable === "number" ? { importable: cost.importable } : {}) } : undefined;
   if (jsonMode) printJson({ error: { message, ...(details ? { details } : {}), ...(e?.status ? { status: e.status } : {}), ...(e?.code ? { code: e.code } : {}), ...(e?.outcome ? { outcome: e.outcome } : {}) } });
-  else console.error(pc.red(`✗ ${message}`));
+  else console.error(pc.red(`✗ ${sanitizeTerminal(message)}`));
 }
 
 export function finishOutput() {
@@ -86,7 +110,7 @@ export function finishOutput() {
 }
 
 export function warn(msg: string) {
-  console.log(pc.yellow(`! ${msg}`));
+  console.log(pc.yellow(`! ${sanitizeTerminal(msg)}`));
 }
 
 export function formatMoney(amount: number, currency = "MXN") {
