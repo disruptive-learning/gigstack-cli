@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
 import { segment } from "../input.js";
-import { printJson, printKeyValue, error, isJsonMode, formatMoney, formatDate, spin, warn } from "../output.js";
+import { printJson, printKeyValue, error, isJsonMode, formatMoney, formatDate, spin, warn, sanitizeTerminal } from "../output.js";
 
 // ─── ID type detection ──────────────────────────────────────
 
@@ -73,7 +73,7 @@ async function tryAll(id: string, team?: string): Promise<FetchResult> {
 // ─── Explain renderers ──────────────────────────────────────
 
 function explainInvoice(i: any) {
-  const clientName = i.client?.legal_name || i.client?.name || "desconocido";
+  const clientName = sanitizeTerminal(i.client?.legal_name || i.client?.name || "desconocido");
   const isPPD = (i.payment_method || "").toUpperCase() === "PPD";
   const isCancelled = (i.status || "").toLowerCase() === "cancelled";
 
@@ -104,8 +104,8 @@ function explainInvoice(i: any) {
   if (isCancelled) {
     console.log("");
     console.log(pc.bold(pc.red("Cancelada")));
-    if (i.cancellation_status) console.log(`  Status cancelación: ${i.cancellation_status}`);
-    if (i.cancellation_receipt) console.log(`  Acuse: ${i.cancellation_receipt}`);
+    if (i.cancellation_status) console.log(`  Status cancelación: ${sanitizeTerminal(i.cancellation_status)}`);
+    if (i.cancellation_receipt) console.log(`  Acuse: ${sanitizeTerminal(i.cancellation_receipt)}`);
   }
 
   // Narrative
@@ -125,7 +125,7 @@ function explainInvoice(i: any) {
 }
 
 function explainPayment(p: any) {
-  const clientName = p.client?.legal_name || p.client?.name || "desconocido";
+  const clientName = sanitizeTerminal(p.client?.legal_name || p.client?.name || "desconocido");
 
   printKeyValue({
     ID: p.id || "—",
@@ -145,10 +145,10 @@ function explainPayment(p: any) {
   if (p.automation_type || p.invoice_id || p.invoice?.uuid) {
     console.log("");
     console.log(pc.bold("Automatización"));
-    if (p.automation_type) console.log(`  Tipo: ${p.automation_type}`);
+    if (p.automation_type) console.log(`  Tipo: ${sanitizeTerminal(p.automation_type)}`);
     const invoiceRef = p.invoice?.uuid || p.invoice_id || p.invoiceId;
-    if (invoiceRef) console.log(`  Factura generada: ${invoiceRef}`);
-    if (p.receipt_id || p.receiptId) console.log(`  Recibo generado: ${p.receipt_id || p.receiptId}`);
+    if (invoiceRef) console.log(`  Factura generada: ${sanitizeTerminal(invoiceRef)}`);
+    if (p.receipt_id || p.receiptId) console.log(`  Recibo generado: ${sanitizeTerminal(p.receipt_id || p.receiptId)}`);
   }
 
   // Narrative
@@ -156,10 +156,10 @@ function explainPayment(p: any) {
   const formLabel = p.payment_form ? ` via forma ${p.payment_form}` : "";
   const processorLabel = p.processor || p.payment_processor ? ` (${p.processor || p.payment_processor})` : "";
   let narrative = `Pago de ${formatMoney(p.total, p.currency)} recibido de ${clientName} el ${formatDate(p.created_at)}${formLabel}${processorLabel}.`;
-  narrative += ` Status: ${p.status || "desconocido"}.`;
-  const invoiceRef = p.invoice?.uuid || p.invoice_id || p.invoiceId;
+  narrative += ` Status: ${sanitizeTerminal(p.status || "desconocido")}.`;
+  const invoiceRef = sanitizeTerminal(p.invoice?.uuid || p.invoice_id || p.invoiceId || "");
   if (invoiceRef) narrative += ` Se generó factura ${invoiceRef}.`;
-  const receiptRef = p.receipt_id || p.receiptId;
+  const receiptRef = sanitizeTerminal(p.receipt_id || p.receiptId || "");
   if (receiptRef) narrative += ` Se generó recibo ${receiptRef}.`;
   console.log(pc.dim(narrative));
 }
@@ -199,15 +199,15 @@ async function explainClient(c: any, team?: string) {
 
   // Narrative
   console.log("");
-  const clientName = c.legal_name || c.name || "desconocido";
-  const rfcLabel = c.tax_id ? `RFC: ${c.tax_id}` : "sin RFC";
+  const clientName = sanitizeTerminal(c.legal_name || c.name || "desconocido");
+  const rfcLabel = c.tax_id ? `RFC: ${sanitizeTerminal(c.tax_id)}` : "sin RFC";
   const validLabel = c.is_valid ? "datos fiscales válidos" : "datos fiscales sin validar";
   const narrative = `Cliente ${clientName} (${rfcLabel}). ${invoiceCount} factura(s), ${paymentCount} pago(s) registrados. ${validLabel}.`;
   console.log(pc.dim(narrative));
 }
 
 function explainReceipt(r: any) {
-  const clientName = r.client?.legal_name || r.client?.name || "público general";
+  const clientName = sanitizeTerminal(r.client?.legal_name || r.client?.name || "público general");
   const status = (r.status || "").toLowerCase();
 
   printKeyValue({
@@ -223,7 +223,7 @@ function explainReceipt(r: any) {
   if (r.invoice_id || r.invoiceId || r.invoice?.uuid) {
     console.log("");
     console.log(pc.bold("Autofactura"));
-    console.log(`  Factura: ${r.invoice?.uuid || r.invoice_id || r.invoiceId}`);
+    console.log(`  Factura: ${sanitizeTerminal(r.invoice?.uuid || r.invoice_id || r.invoiceId)}`);
     if (r.invoiced_at) console.log(`  Fecha: ${formatDate(r.invoiced_at)}`);
   }
 
@@ -234,7 +234,7 @@ function explainReceipt(r: any) {
     narrative = `Recibo pendiente de autofactura por ${formatMoney(r.total, r.currency)} para ${clientName}. El dinero YA fue cobrado.`;
     if (r.validUntil) narrative += ` Vigente hasta ${formatDate(r.validUntil)}.`;
   } else if (status === "invoiced" || status === "completed") {
-    const invoiceRef = r.invoice?.uuid || r.invoice_id || r.invoiceId;
+    const invoiceRef = sanitizeTerminal(r.invoice?.uuid || r.invoice_id || r.invoiceId || "");
     narrative = `Recibo por ${formatMoney(r.total, r.currency)}. El cliente se autofacturó${r.invoiced_at ? ` el ${formatDate(r.invoiced_at)}` : ""}.`;
     if (invoiceRef) narrative += ` Factura: ${invoiceRef}.`;
   } else if (status === "expired") {
@@ -265,7 +265,7 @@ function explainService(s: any) {
   const taxLabel = (s.taxes || []).length > 0
     ? `Con ${(s.taxes || []).map((t: any) => `${t.type} ${(t.rate * 100).toFixed(0)}%`).join(" + ")}.`
     : "Sin impuestos configurados.";
-  const narrative = `Servicio "${s.description || "—"}" a ${formatMoney(s.unit_price, "MXN")} por unidad (${s.unit_key || "—"}). ${taxLabel}`;
+  const narrative = `Servicio "${sanitizeTerminal(s.description || "—")}" a ${formatMoney(s.unit_price, "MXN")} por unidad (${sanitizeTerminal(s.unit_key || "—")}). ${taxLabel}`;
   console.log(pc.dim(narrative));
 }
 

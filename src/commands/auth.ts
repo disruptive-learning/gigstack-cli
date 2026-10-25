@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { saveProfile, removeProfile, switchProfile, getActiveProfile, listProfiles, isTestKey } from "../config.js";
+import { saveProfile, removeProfile, switchProfile, getActiveProfile, listProfiles, isTestKey, isSafeProfileName } from "../config.js";
 import { api, resolveTeam } from "../api.js";
 import { success, error, printKeyValue, isJsonMode, printJson } from "../output.js";
 import { apiBaseUrl } from "../runtime.js";
@@ -13,6 +13,10 @@ export function registerAuthCommands(program: Command) {
     .option("-k, --api-key <key>", "API key (o se pedirá interactivamente)")
     .option("-p, --profile <name>", "Nombre del perfil", "default")
     .action(async (opts) => {
+      if (!isSafeProfileName(opts.profile)) {
+        error("Nombre de perfil inválido. Usa 1–64 caracteres [A-Za-z0-9_-] y evita nombres reservados (__proto__, constructor, prototype).");
+        process.exit(1);
+      }
       let apiKey = opts.apiKey || process.env.GIGSTACK_API_KEY;
       if (!apiKey) {
         console.log(pc.dim("Obtén tu API key en: app.gigstack.pro/settings → API\n"));

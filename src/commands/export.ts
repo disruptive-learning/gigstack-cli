@@ -65,11 +65,25 @@ const CLIENT_COLUMNS: ColumnDef[] = [
 
 // ─── CSV helpers ───────────────────────────────────────────
 
+// Characters that make a spreadsheet treat a cell as a formula when they are
+// the first character of the cell (=, +, -, @, tab, CR). A value beginning with
+// one of these is neutralized with a leading apostrophe — the text marker that
+// Excel, LibreOffice, and Google Sheets honor and hide when rendering — so the
+// cell is shown as inert text instead of being executed (CSV formula injection).
+const FORMULA_PREFIX_RE = /^[=+\-@\t\r]/;
+
 function csvEscape(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  let v = value;
+  if (FORMULA_PREFIX_RE.test(v)) {
+    v = `'${v}`;
   }
-  return value;
+  // RFC-4180 quoting: wrap the field in double quotes (doubling any embedded
+  // quote) when it contains a comma, quote, CR, or LF. CR is included so a
+  // bare \r can no longer be emitted raw into the middle of a row.
+  if (/[",\r\n]/.test(v)) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
 }
 
 function toCsvRow(columns: ColumnDef[], item: any): string {
