@@ -70,7 +70,7 @@ export function registerPaymentCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (id, opts) => {
       try {
-        const res = await api("GET", `/payments/${id}`, { team: opts.team });
+        const res = await api("GET", `/payments/${segment(id)}`, { team: opts.team });
         const p = res.data;
         if (isJsonMode()) return printJson(p);
         printKeyValue({

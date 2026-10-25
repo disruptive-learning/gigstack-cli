@@ -42,9 +42,16 @@ export async function api(
   if (opts?.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
 
   if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Ruta de API inválida");
+  // Callers interpolate resource IDs into `path`; a hostile ID must not be able to
+  // smuggle URL *structure* (traversal, encoded dot-segments, fragments, backslashes,
+  // control/whitespace) that re-targets the request to a different endpoint. Query
+  // parameters belong in opts.query, never in the raw path.
+  if (/[#\\]|[\x00-\x20]|%00|%2e/i.test(path) || /(^|\/)\.\.?(?=\/|\?|$)/.test(path)) throw new Error("Ruta de API inválida");
   const url = new URL(`${apiBaseUrl()}${path}`);
+  // Defense in depth: reject anything that survived URL normalization as traversal.
+  if (url.pathname.includes("//") || /(^|\/)\.\.?(\/|$)/.test(url.pathname) || url.hash) throw new Error("Ruta de API inválida");
   const team = opts?.team ?? runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
-  const suppliedTeams = [team, opts?.query?.team, opts?.body?.team].filter(Boolean);
+  const suppliedTeams = [team, opts?.query?.team, opts?.body?.team, url.searchParams.get("team")].filter(Boolean);
   if (new Set(suppliedTeams).size > 1) throw new Error("El equipo del body/query no coincide con --team");
   if (opts?.query) {
     for (const [k, v] of Object.entries(opts.query)) {

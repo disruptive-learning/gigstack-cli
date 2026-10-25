@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { api } from "../api.js";
+import { segment, requireConfirmation } from "../input.js";
 import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, spin } from "../output.js";
 import { ask } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
@@ -38,7 +39,7 @@ export function registerServiceCommands(program: Command) {
     .option("--team <id>", "Team ID")
     .action(async (id, opts) => {
       try {
-        const res = await api("GET", `/services/${id}`, { team: opts.team });
+        const res = await api("GET", `/services/${segment(id)}`, { team: opts.team });
         const s = res.data;
         if (isJsonMode()) return printJson(s);
         printKeyValue({
@@ -106,7 +107,7 @@ export function registerServiceCommands(program: Command) {
           if (opts.unitKey) body.unit_key = opts.unitKey;
           if (opts.sku) body.sku = opts.sku;
         } else {
-          const current = await spin("Cargando servicio…", () => api("GET", `/services/${id}`, { team: opts.team }));
+          const current = await spin("Cargando servicio…", () => api("GET", `/services/${segment(id)}`, { team: opts.team }));
           const s = current.data;
           console.log(pc.dim(`Editando: ${s.description}\n`));
           console.log(pc.dim("Deja vacío para mantener el valor actual.\n"));
@@ -126,7 +127,7 @@ export function registerServiceCommands(program: Command) {
 
         if (Object.keys(body).length === 0) { console.log(pc.dim("Sin cambios")); return; }
 
-        const res = await spin("Actualizando servicio…", () => api("PUT", `/services/${id}`, { body, team: opts.team }));
+        const res = await spin("Actualizando servicio…", () => api("PUT", `/services/${segment(id)}`, { body, team: opts.team }));
         success(`Servicio ${id} actualizado`);
         if (isJsonMode()) printJson(res.data);
       } catch (e: any) { error(e); }
@@ -136,9 +137,11 @@ export function registerServiceCommands(program: Command) {
     .command("delete <id>")
     .description("Eliminar un servicio")
     .option("--team <id>", "Team ID")
+    .option("-y, --yes", "Confirmar la eliminación (requerido en modo no interactivo)")
     .action(async (id, opts) => {
       try {
-        await api("DELETE", `/services/${id}`, { team: opts.team });
+        await requireConfirmation(opts.yes, `¿Eliminar el servicio ${id} en el equipo/modo seleccionado? Esta acción es irreversible.`);
+        await api("DELETE", `/services/${segment(id)}`, { team: opts.team });
         success(`Servicio ${id} eliminado`);
       } catch (e: any) { error(e); }
     });
