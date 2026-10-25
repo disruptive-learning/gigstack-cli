@@ -56,7 +56,11 @@ export function registerDoctorCommand(program: Command) {
       console.log();
       try {
         const start = Date.now();
-        const team = await resolveTeam(profile.apiKey);
+        // Do NOT re-supply the saved profile key through resolveTeam's override
+        // channel: that would skip the origin-binding check in getApiKey and leak
+        // the credential to an attacker-chosen --base-url / GIGSTACK_API_BASE_URL.
+        // resolveTeam() reads the active profile internally and is origin-checked.
+        const team = await resolveTeam();
         const latency = Date.now() - start;
         pass(`Conexión a API: ${latency}ms`);
 
