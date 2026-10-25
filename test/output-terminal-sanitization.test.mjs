@@ -29,6 +29,12 @@ async function fixture(t, reply) {
       const child = spawn(process.execPath, [cli, ...args], {
         env: {
           ...process.env,
+          // Force color OFF so the only possible ESC bytes in output are
+          // server-injected sequences the sanitizer must strip — not legitimate
+          // picocolors app color, which CI (CI/FORCE_COLOR env) would otherwise add
+          // and make the zero-ESC assertions falsely trip.
+          NO_COLOR: "1",
+          FORCE_COLOR: "0",
           GIGSTACK_API_KEY: token,
           GIGSTACK_API_BASE_URL: `http://127.0.0.1:${server.address().port}/v2`,
           GIGSTACK_TEAM: "t",
