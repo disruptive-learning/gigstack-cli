@@ -18,7 +18,7 @@ This document tracks what's available today and what's coming.
 Pricing v3 (Mexico, MXN before IVA). There are no plans and no seats:
 
 - **$199 MXN per month per RFC** (business). Extra RFCs on the same account: $99 (2nd to 10th), $49 (11th to 50th), $29 (51st on).
-- **10 documents included per RFC per month**, shared by ingreso, egreso, complemento de pago, traslado and retención. After that each CFDI is $2.10 (11–50), $1.80 (51–200), $1.30 (201–1,000), $0.55 (1,001–5,000) and $0.40 (over 5,000); automatic income invoices and payment complements pay 50%.
+- **No documents are included: every CFDI is charged from the first** (ingreso, egreso, complemento de pago, traslado and retención), per RFC per month: $2.10 (1–50), $1.80 (51–200), $1.30 (201–1,000), $0.55 (1,001–5,000) and $0.40 (over 5,000); automatic income invoices and payment complements pay 50%; automatic egresos, traslados and retenciones pay full price.
 - Pago cobrado $0.03, recibo $0.25, XML descargado del SAT $0.20. Cancellations are free.
 - **API, webhooks and MCP are included at no cost.** Add-ons (autofactura, portal de clientes, factura global, eventos recurrentes, descarga masiva, soporte prioritario) and Connect are priced per month on the price list.
 - **Free test mode** with unlimited test invoices until the account goes live (card, own CSD and signed manifest). The RFC fee starts at go-live; 11 welcome credits (1 crédito = 1 MXN) are valid for 30 days.
