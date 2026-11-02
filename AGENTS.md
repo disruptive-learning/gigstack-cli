@@ -7,108 +7,33 @@ This guide is for AI agents and the developers building them. If you're a human 
 The vast majority of gigstack's product surface assumes a human at a keyboard — signup forms, onboarding wizards, dashboard tabs, FIEL upload prompts. None of that scales to AI agents that need to operate accounting systems on behalf of their users (or themselves). So we're building a parallel API-first path:
 
 - **Sign up via a single HTTP call** — no UI, no wizard, no FIEL required to start
-- **Pay per use, not per seat** — the new `agent-tier` plan ($99 MXN/mo + $5 MXN per stamp) is designed for programmatic consumption
+- **Pay per RFC and per use, not per seat** — Pricing v3 has no plans: a monthly fee per RFC plus what you use, and the API, webhooks and MCP are free (see [Pricing](#pricing))
 - **Agent-as-customer is a first-class concept** — RFC genérico by default, fiscal compliance via the existing global-invoicing pipeline
 - **Eventually: machine-to-machine payments** — Stripe shipped MPP (Machine Payments Protocol) in March 2026; we plan to add it as a parallel auth strategy so agents can transact per-call without ever subscribing
 
 This document tracks what's available today and what's coming.
 
-## Today: phase 0 — manual unlock for early access
+## Pricing
 
-If you want to sign up an agent right now, while we ship the public endpoint, **email us at `support@gigstack.io`** with:
+Pricing v3 (Mexico, MXN before IVA). There are no plans and no seats:
 
-- Your agent's intended use case (what it builds, who it serves)
-- The team email you want associated with the account
-- Whether you need live mode, test mode, or both
+- **$199 MXN per month per RFC** (business). Extra RFCs on the same account: $99 (2nd to 10th), $49 (11th to 50th), $29 (51st on).
+- **10 documents included per RFC per month**, shared by ingreso, egreso, complemento de pago, traslado and retención. After that each CFDI is $2.10 (11–50), $1.80 (51–200), $1.30 (201–1,000), $0.55 (1,001–5,000) and $0.40 (over 5,000); automatic income invoices and payment complements pay 50%.
+- Pago cobrado $0.03, recibo $0.25, XML descargado del SAT $0.20. Cancellations are free.
+- **API, webhooks and MCP are included at no cost.** Add-ons (autofactura, portal de clientes, factura global, eventos recurrentes, descarga masiva, soporte prioritario) and Connect are priced per month on the price list.
+- **Free test mode** with unlimited test invoices until the account goes live (card, own CSD and signed manifest). The RFC fee starts at go-live; 11 welcome credits (1 crédito = 1 MXN) are valid for 30 days.
 
-We'll provision a team manually and flip the `billingAccount.haveAPIAccess = true` flag — that's our admin override that bypasses the plan gate. You'll get an API key within a business day. No subscription, no card on file, no plan during the early-access window.
+Read prices from the machine price list instead of hard-coding them: `GET https://api.gigstack.io/v2/pricing` (no key, read only). Human page: <https://gigstack.pro/precios>.
 
-This is the path to use **today**. Phase 1 (public endpoint) ships next.
+## Create an account for a person
 
-## Phase 1 (shipping next): `POST /v2/auth/signup`
+An agent can open a test account on a person's behalf with `POST https://api.gigstack.io/v2/auth/sandbox` (being enabled in production now; until then it may answer `404`, and the person signs up at <https://app.gigstack.pro/register>). It returns a single `sk_test_` key that never stamps with the SAT and charges nothing. The person receives a code by email; the agent asks for it and claims the account with `POST /v2/auth/sandbox/claim`, and the person then goes live from <https://app.gigstack.pro>.
 
-A single HTTP endpoint that creates a complete gigstack account end-to-end:
+Exact request fields, limits and errors: <https://docs.gigstack.io/agents.md> and <https://gigstack.pro/agents.md>.
 
-```http
-POST https://api.gigstack.io/v2/auth/signup
-Authorization: Bearer <partner-api-key>
-Content-Type: application/json
-Idempotency-Key: <uuid>
+Partners with a partner key can also create complete accounts with `POST /v2/auth/signup`; see the API reference at <https://docs.gigstack.io>.
 
-{
-  "email": "agent@example.com",
-  "name": "Agent Builder Inc",
-  "plan_id": "agent-tier",
-  "billing_cycle": "monthly",
-  "stripe_payment_method": "pm_xxx",
-  "metadata": { "source": "my-agent-cli" }
-}
-```
-
-Response (`201 Created`):
-
-```jsonc
-{
-  "user_id": "abc123...",
-  "team_id": "team_xxx",
-  "billing_account_id": "ba_xxx",
-  "subscription": { "id": "sub_...", "status": "active", "current_period_end": 1735603200 },
-  "api_keys": {
-    "live": "<jwt — shown once, store immediately>",
-    "test": "<jwt — shown once, store immediately>"
-  },
-  "next_steps": {
-    "fiel_upload_url": "POST /v2/teams/{team_id}/sat-connection",
-    "manifest_sign_url": "POST /v2/teams/{team_id}/manifest/sign",
-    "note": "RFC and FIEL are only required for CFDI stamping. Clients, payments, services, receipts, and webhooks all work without them."
-  }
-}
-```
-
-### What it does internally
-
-1. Creates a Firebase Auth user (random secure password)
-2. Writes `users/{uid}`, `billingAccounts/{baId}`, `teams/{teamId}` with sensible defaults
-3. Subscribes to the requested plan via Stripe (off-session, no Checkout redirect)
-4. Mints both live + test API keys
-5. Returns everything in a single response
-
-### What you DON'T need to provide
-
-- No RFC required at signup — we default to RFC genérico (`XAXX010101000`). You can upload the customer's real RFC + FIEL later via `POST /v2/teams/{team_id}/sat-connection` once they have CFDIs to stamp in their own name.
-- No FIEL required to start — clients, payments, services, receipts, and webhooks all work fine without it.
-- No phone, no marketing opt-in, no billing address beyond country code.
-
-### Idempotency
-
-`Idempotency-Key` is **required**. Retries with the same key return the cached response. Use a v4 UUID per signup attempt.
-
-### Errors
-
-| Status | Reason |
-|--------|--------|
-| 400 | Invalid body (missing required field, bad plan_id) |
-| 401 | Missing/invalid partner auth |
-| 402 | Stripe rejected the payment method |
-| 409 | Email already registered — direct the user to sign in instead |
-| 500 | Internal — includes a `binnacle_id` to share with support |
-
-## The `agent-tier` plan
-
-A new plan designed specifically for programmatic consumption:
-
-| | Monthly | Annual |
-|---|---|---|
-| Base | **$99 MXN** | **$1,069 MXN** ($89/mo equivalent) |
-| Included CFDI stamps | 20 | 240 |
-| Per additional stamp | $5 MXN | $5 MXN |
-| API & webhooks | ✅ | ✅ |
-| UI seats | None | None |
-| RFC required | No | No |
-
-Hidden from the public pricing page — surfaced only via `POST /v2/auth/signup` and this document. To pick a different plan (`pro`, `business`), pass that `plan_id` instead — your customer just won't get an account in the consumer-facing dashboard since they signed up via API.
-
-## Phase 3 (coming): MPP — pay per call, no signup
+## Coming: MPP — pay per call, no signup
 
 Stripe shipped the **Machine Payments Protocol** (MPP) in March 2026. It uses HTTP 402 to let an agent pay per request: the server responds `402 Payment Required` with a challenge, the agent attaches a Stripe-issued payment token, the request goes through.
 
@@ -119,7 +44,7 @@ POST /v2/invoices/income
 # (no Authorization header)
 
 → 402 Payment Required
-  { "amount": 5, "currency": "mxn", "description": "CFDI stamp",
+  { "amount": "<price from /v2/pricing>", "currency": "mxn", "description": "CFDI stamp",
     "accepted_methods": ["stripe-spt", "tempo-stablecoin"],
     "challenge_id": "ch_xxx" }
 
@@ -130,7 +55,7 @@ Mpp-Challenge-Id: ch_xxx
 { … invoice body … }
 
 → 201 Created
-  { "id": "inv_...", "uuid": "...", "receipt": { "amount_charged": 5, "currency": "mxn" } }
+  { "id": "inv_...", "uuid": "...", "receipt": { "amount_charged": "<amount>", "currency": "mxn" } }
 ```
 
 No signup required. No subscription. No RFC. The customer of record fiscally is a global-invoice line item under público en general, batched into the existing EOM CFDI pipeline.
@@ -172,4 +97,4 @@ UI strings come back in Spanish but data field names are English.
 
 ## Want to chat?
 
-We're actively looking for the first 5 agent builders to use the API-only path in production. If you're building something interesting and want to influence the shape of phases 1-3, email `support@gigstack.io` or open an issue at <https://github.com/disruptive-learning/gigstack-cli/issues>.
+We're actively looking for the first 5 agent builders to use the API-only path in production. If you're building something interesting and want to influence what comes next, email `support@gigstack.io` or open an issue at <https://github.com/disruptive-learning/gigstack-cli/issues>.

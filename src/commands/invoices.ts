@@ -602,21 +602,24 @@ export function registerInvoiceCommands(program: Command) {
 
         const statusLabel: Record<string, string> = {
           active: "Activa",
-          needs_activation: "Lista para activar (incluida en su plan)",
-          needs_addon: "Requiere contratar add-on",
-          needs_upgrade: "Requiere actualizar su plan",
+          needs_activation: "Lista para activar",
+          needs_addon: "Requiere contratar add-on (plan anterior)",
+          needs_upgrade: "Requiere actualizar su plan (plan anterior)",
         };
+        const monthlyMxn = typeof d.pricing?.monthlyMxn === "number" ? d.pricing.monthlyMxn : null;
 
         printKeyValue({
           Estado: statusLabel[d.status] || d.status,
           "Plan incluye función": d.planIncludesFeature ? "sí" : "no",
           "Está activada": d.isActivated ? "sí" : "no",
           "Precio por descarga": d.pricing?.perDownload || "—",
-          "Add-on mensual": d.pricing?.addonMonthly || "—",
+          "Cuota mensual": monthlyMxn !== null ? `$${monthlyMxn} MXN por RFC, antes de IVA` : d.pricing?.addonMonthly || "—",
         });
 
         console.log("");
-        if (d.status === "needs_activation" || d.status === "needs_addon") {
+        if (d.requiresLive) {
+          console.log(pc.dim("→ Su cuenta está en modo de prueba. Active producción en https://app.gigstack.pro antes de activar Descarga Masiva"));
+        } else if (d.status === "needs_activation" || d.status === "needs_addon") {
           console.log(pc.dim("→ Ejecute 'gigstack invoices sat activate' para habilitar"));
         } else if (d.status === "needs_upgrade") {
           console.log(pc.dim("→ Actualice su plan en https://app.gigstack.pro/billing"));
@@ -646,11 +649,20 @@ export function registerInvoiceCommands(program: Command) {
           return;
         }
 
+        // Pricing v3: downloads are real SAT documents, so a team in test mode
+        // must go live first. The API answers 409 go_live_required otherwise.
+        if (d.requiresLive) {
+          error("Su cuenta está en modo de prueba. Active producción en https://app.gigstack.pro antes de activar Descarga Masiva");
+          return;
+        }
+
         console.log(pc.bold("\nResumen de cargos:"));
         console.log(`  Por descarga: ${d.pricing?.perDownload || "$0.20 MXN"}`);
-        // addonMonthly is null since the monthly base fee was withdrawn — only
-        // print a line if the API ever reports a fee again.
-        if (d.pricing?.addonMonthly) {
+        // Pricing v3 returns the monthly fee per RFC from the catalog in
+        // pricing.monthlyMxn. Legacy plans return addonMonthly: null (no fee).
+        if (typeof d.pricing?.monthlyMxn === "number" && d.pricing.monthlyMxn > 0) {
+          console.log(`  Cuota mensual: $${d.pricing.monthlyMxn} MXN por RFC, antes de IVA`);
+        } else if (d.pricing?.addonMonthly) {
           console.log(`  Add-on mensual: ${d.pricing.addonMonthly}`);
         } else if (d.status === "needs_addon") {
           console.log(pc.dim("  Sin cuota mensual — solo se cobra por descarga"));
@@ -667,7 +679,7 @@ export function registerInvoiceCommands(program: Command) {
         if (isJsonMode()) return printJson(res.data);
         success(res.message || "Descarga Masiva activada");
         if (res.data?.type) {
-          console.log(pc.dim(`  Tipo: ${res.data.type === "included" ? "incluida en plan" : "add-on"}`));
+          console.log(pc.dim(`  Tipo: ${res.data.type === "usage" ? "cuota mensual por RFC más uso" : res.data.type === "included" ? "incluida en plan" : "add-on"}`));
         }
       } catch (e: any) { error(e); }
     });

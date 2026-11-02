@@ -334,13 +334,13 @@ const KNOWLEDGE: Record<string, ContextTopic> = {
       schedule:
         "Recurring config (time of day, types, days_back, enabled) that triggers downloads automatically. View/modify with 'gigstack invoices sat schedule show|set|history'.",
       activation_status:
-        "GET /v2/invoices/download/activate/status returns one of: 'active' (running), 'needs_activation' (plan includes feature, just enable), 'needs_addon' (paid plan without the feature — per-download only, no monthly fee), 'needs_upgrade' (free plan — must upgrade first).",
+        "GET /v2/invoices/download/activate/status returns one of: 'active' (running), 'needs_activation' (not yet enabled), 'needs_addon' (legacy paid plan without the feature — per-download only, no monthly fee), 'needs_upgrade' (legacy free plan — must upgrade first). Pricing v3 accounts also get pricing.monthlyMxn (monthly fee per RFC) and requiresLive (true while the team is in test mode).",
     },
     statuses: {
       active: "Service hired and running. Scheduled downloads execute, retry endpoint works, billing is wired.",
-      needs_activation: "Plan already includes Descarga Masiva — call 'sat activate' to enable. No extra charge.",
-      needs_addon: "Plan does NOT include the feature, but can activate it. 'sat activate' subscribes the team to the $0.20 MXN per-download meter only — the $400 MXN/mes/RFC base fee was removed and pricing.addonMonthly now returns null.",
-      needs_upgrade: "Free plan — must upgrade at app.gigstack.pro/billing before activation is possible.",
+      needs_activation: "Not yet enabled — call 'sat activate'. On Pricing v3 this starts the monthly fee per RFC (pricing.monthlyMxn, $99 MXN before IVA in the current catalog) plus $0.20 MXN per XML; on a legacy plan that includes the feature there is no extra charge.",
+      needs_addon: "Legacy plan that does NOT include the feature, but can activate it. 'sat activate' subscribes the team to the $0.20 MXN per-download meter only; pricing.addonMonthly returns null.",
+      needs_upgrade: "Legacy free plan — must upgrade at app.gigstack.pro/billing before activation is possible.",
       ready: "On a single sat_invoice: hasXml === true, XML file is downloaded and parsed.",
       building: "On a single sat_invoice: download in flight or queued.",
       error: "On a single sat_invoice: last XML fetch failed (see xmlError). Use 'sat retry <uuid>' to try again.",
@@ -369,7 +369,7 @@ const KNOWLEDGE: Record<string, ContextTopic> = {
       "XML files live under sat_invoices/{uuid}/files/{uuid} in Firestore — there is no API endpoint to fetch the raw XML, so 'sat download' only saves the PDF. Tell the user the XML is web-only.",
       "When 'sat retry' returns 422, the response.error field has the real PAC reason — surface it. 502 means the function timed out or the gateway failed; investigate logs.",
       "received invoices (gastos) are the high-value use case — they show what the team owes / has paid suppliers, and they enable expense reconciliation against bank movements.",
-      "Pricing: free plan needs an upgrade first. Every paid plan pays the same $0.20 MXN per download and nothing else — there is no longer a monthly base fee for teams whose plan does not include the feature.",
+      "Pricing v3 (current, no plans): $99 MXN per RFC per month plus $0.20 MXN per XML downloaded, before IVA, and the team must be live (requiresLive false) to activate. Quote pricing.monthlyMxn and pricing.perDownload from 'sat status', not remembered numbers. Legacy plan accounts pay only $0.20 MXN per download; a legacy free plan needs an upgrade first. Full price list: https://gigstack.pro/precios or GET https://api.gigstack.io/v2/pricing.",
     ],
   },
 };
