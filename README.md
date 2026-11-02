@@ -316,10 +316,12 @@ Automated download of every CFDI the SAT has issued to or for your RFC, includin
 
 **Setup prerequisites:** Initial FIEL upload (.cer + .key files) and RFC registration are sensitive operations and only run from the web UI: [app.gigstack.pro/gastos](https://app.gigstack.pro/gastos). Once your FIEL is uploaded, the rest of the lifecycle (activate, list, retry, PDF) is available from the CLI.
 
-**Pricing:**
+**Pricing** (Pricing v3, MXN before IVA; full list at [gigstack.pro/precios](https://gigstack.pro/precios)):
 
-- `$0.20 MXN` per XML downloaded (metered)
-- `$400 MXN/mes` per RFC add-on (only for plans that don't already include the feature)
+- `$99 MXN/mes` per RFC
+- `$0.20 MXN` per XML downloaded
+
+`gigstack invoices sat status` shows the exact amounts the API returns for your account. Accounts still on a legacy plan pay only the per-XML price. On Pricing v3 the account must be live (card, own CSD and signed manifest) before activating, since downloads are real SAT documents.
 
 #### Hire the service
 
@@ -334,9 +336,9 @@ gigstack invoices sat deactivate        # Cancel (stops new downloads)
 | Status | Meaning |
 |--------|---------|
 | `active` | Already enabled; downloads are billing |
-| `needs_activation` | Plan includes the feature — run `activate` (no monthly add-on cost) |
-| `needs_addon` | Plan doesn't include it — `activate` adds the $400/RFC/month add-on |
-| `needs_upgrade` | Free plan — upgrade required at app.gigstack.pro/billing |
+| `needs_activation` | Not yet enabled — run `activate` (on Pricing v3 this starts the monthly fee per RFC plus per-XML usage) |
+| `needs_addon` | Legacy plan without the feature — `activate` adds only the per-XML meter |
+| `needs_upgrade` | Legacy free plan — upgrade required at app.gigstack.pro/billing |
 
 #### Daily usage
 
