@@ -10,6 +10,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { setJsonMode, error, finishOutput } from "./output.js";
 import { registerAuthCommands } from "./commands/auth.js";
+import { registerSignupCommands } from "./commands/signup.js";
 import { registerClientCommands } from "./commands/clients.js";
 import { registerInvoiceCommands } from "./commands/invoices.js";
 import { registerPaymentCommands } from "./commands/payments.js";
@@ -63,6 +64,7 @@ program
   });
 
 registerAuthCommands(program);
+registerSignupCommands(program);
 registerContextCommand(program);
 registerStatusCommand(program);
 registerDoctorCommand(program);
@@ -102,6 +104,7 @@ program.addHelpText(
   `
 ${pc.bold("Ejemplos:")}
   ${pc.dim("$")} gigstack login                          Autenticarse
+  ${pc.dim("$")} gigstack signup --sandbox --email <e> --name <n>  Cuenta sandbox de prueba
   ${pc.dim("$")} gigstack context payments               Entender pagos (para agentes)
   ${pc.dim("$")} gigstack status                         Resumen rápido del equipo
   ${pc.dim("$")} gigstack doctor                         Diagnóstico completo
