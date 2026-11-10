@@ -8,7 +8,9 @@ import {
   getProfile,
   isSafeProfileName,
   saveProfile,
-  updateProfileSandbox,, credentialsPath } from "../config.js";
+  updateProfileSandbox,
+  credentialsPath,
+} from "../config.js";
 import { AGENT_CLIENT, appUrl } from "../onboarding.js";
 import { isJsonMode, printJson, sanitizeTerminal, success, warn } from "../output.js";
 import { ask } from "../prompt.js";
