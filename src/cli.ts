@@ -10,6 +10,8 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { setJsonMode, error, finishOutput } from "./output.js";
 import { registerAuthCommands } from "./commands/auth.js";
+import { registerSignupCommands } from "./commands/signup.js";
+import { registerDemoCommand } from "./commands/demo.js";
 import { registerClientCommands } from "./commands/clients.js";
 import { registerInvoiceCommands } from "./commands/invoices.js";
 import { registerPaymentCommands } from "./commands/payments.js";
@@ -62,6 +64,8 @@ program
     apiBaseUrl();
   });
 
+registerSignupCommands(program);
+registerDemoCommand(program);
 registerAuthCommands(program);
 registerContextCommand(program);
 registerStatusCommand(program);
@@ -101,6 +105,9 @@ program.addHelpText(
   "after",
   `
 ${pc.bold("Ejemplos:")}
+  ${pc.dim("$")} gigstack signup                         Crear cuenta de prueba gratis
+  ${pc.dim("$")} gigstack demo                           Emitir una factura de prueba
+  ${pc.dim("$")} gigstack signup claim <código>          Reclamar tu cuenta de prueba
   ${pc.dim("$")} gigstack login                          Autenticarse
   ${pc.dim("$")} gigstack context payments               Entender pagos (para agentes)
   ${pc.dim("$")} gigstack status                         Resumen rápido del equipo

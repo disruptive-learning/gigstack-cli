@@ -7,9 +7,10 @@ import { writeFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import pc from "picocolors";
 import { api, ApiError } from "../api.js";
-import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin } from "../output.js";
+import { printTable, printJson, printListJson, printKeyValue, success, error, isJsonMode, formatMoney, formatDate, spin, sanitizeTerminal } from "../output.js";
 import { ask, askRequired, select, confirm } from "../prompt.js";
 import { withListOpts, buildListQuery, printPaginationHint } from "../list-opts.js";
+import { describeDemoError, runDemoInvoice } from "../demo.js";
 
 function uid(item: any): string {
   return item.uuid ? item.uuid.slice(0, 8) + "…" : item.id ? item.id.slice(0, 12) + "…" : "—";
@@ -164,8 +165,16 @@ export function registerInvoiceCommands(program: Command) {
     .option("--series <series>", "Serie")
     .option("--send-email", "Enviar factura por email al cliente")
     .option("--emails <emails>", "Emails adicionales (separados por coma)")
+    .option("--demo", "Factura de PRUEBA a PUBLICO EN GENERAL con un servicio de ejemplo (igual que gigstack demo; solo llave de prueba)")
     .option("--team <id>", "Team ID"))
     .action(async (opts, command) => {
+      if (opts.demo) {
+        try {
+          const extra = ["data", "file", "stdin", "client", "items", "series", "sendEmail", "emails"].filter((k) => opts[k] !== undefined);
+          if (extra.length) throw new Error("--demo no se combina con otros datos de la factura; usa solo --demo");
+          return await runDemoInvoice({ team: opts.team });
+        } catch (e: any) { return error(describeDemoError(e)); }
+      }
       try {
         if (hasJsonInput(opts)) return await sendCompleteBody(command, opts, "POST", `/invoices/income`);
         const interactive = !opts.client && !opts.items;
@@ -334,8 +343,14 @@ export function registerInvoiceCommands(program: Command) {
         const res = await api("GET", `/invoices/${segment(uuid)}/files`, { team: opts.team });
         if (isJsonMode()) return printJson(res.data);
         const files = res.data;
-        if (files.pdf) console.log(`PDF: ${files.pdf}`);
-        if (files.xml) console.log(`XML: ${files.xml}`);
+        if (Array.isArray(files)) {
+          // API v2 returns the files themselves ({content: base64, filename, type}), not links.
+          for (const f of files) console.log(`${String(f?.type ?? "").includes("pdf") ? "PDF" : "XML"}: ${sanitizeTerminal(f?.filename ?? "—")}`);
+          console.log(pc.dim(`Descárgalos con: gigstack invoices download ${uuid}`));
+          return;
+        }
+        if (files?.pdf) console.log(`PDF: ${files.pdf}`);
+        if (files?.xml) console.log(`XML: ${files.xml}`);
       } catch (e: any) { error(e); }
     });
 
@@ -349,12 +364,19 @@ export function registerInvoiceCommands(program: Command) {
         const res = await spin("Obteniendo archivos…", () => api("GET", `/invoices/${segment(uuid)}/files`, { team: opts.team }));
         const files = res.data;
         const saved: string[] = [];
-        if (files.pdf) {
+        if (Array.isArray(files)) {
+          // API v2 returns base64 content ({content, filename, type}) rather than links.
+          for (const f of files) {
+            if (typeof f?.content !== "string") continue;
+            const suffix = String(f?.type ?? "").includes("pdf") || String(f?.filename ?? "").endsWith(".pdf") ? ".pdf" : ".xml";
+            saved.push(writeDownload(opts.out, uuid, suffix, Buffer.from(f.content, "base64")));
+          }
+        } else if (files?.pdf) {
           const pdfRes = await spin("Descargando PDF…", () => fetch(files.pdf));
           const buf = Buffer.from(await pdfRes.arrayBuffer());
           saved.push(writeDownload(opts.out, uuid, ".pdf", buf));
         }
-        if (files.xml) {
+        if (!Array.isArray(files) && files?.xml) {
           const xmlRes = await spin("Descargando XML…", () => fetch(files.xml));
           const buf = Buffer.from(await xmlRes.arrayBuffer());
           saved.push(writeDownload(opts.out, uuid, ".xml", buf));

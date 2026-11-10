@@ -29,6 +29,8 @@ Read prices from the machine price list instead of hard-coding them: `GET https:
 
 An agent can open a test account on a person's behalf with `POST https://api.gigstack.io/v2/auth/sandbox` (being enabled in production now; until then it may answer `404`, and the person signs up at <https://app.gigstack.pro/register>). It returns a single `sk_test_` key that never stamps with the SAT and charges nothing. The person receives a code by email; the agent asks for it and claims the account with `POST /v2/auth/sandbox/claim`, and the person then goes live from <https://app.gigstack.pro>.
 
+From the CLI the same flow is `gigstack signup --email <person's email> --name <name> --json` (saves the test key as the `sandbox` profile), `gigstack demo --json` (one test invoice to PUBLICO EN GENERAL, refused with a live key) and `gigstack signup claim <code> --json`. See the README section "Sign up, claim and demo".
+
 Exact request fields, limits and errors: <https://docs.gigstack.io/agents.md> and <https://gigstack.pro/agents.md>.
 
 Partners with a partner key can also create complete accounts with `POST /v2/auth/signup`; see the API reference at <https://docs.gigstack.io>.

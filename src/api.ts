@@ -39,7 +39,23 @@ export async function api(
   opts?: { body?: any; form?: FormData; sideEffect?: boolean; idempotencyKey?: string; query?: Record<string, string>; apiKey?: string; team?: string; identityOnly?: boolean }
 ) {
   const apiKey = getApiKey(opts?.apiKey);
-  if (opts?.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
+  return request(method, path, { ...opts, authorization: `Bearer ${apiKey}` });
+}
+
+/**
+ * A public route (no credential): no Authorization header and no team selector are sent,
+ * so neither a saved profile nor GIGSTACK_API_KEY can leak to it. Used by `signup`.
+ */
+export async function publicApi(method: string, path: string, opts?: { body?: any; idempotencyKey?: string; sideEffect?: boolean }) {
+  return request(method, path, { ...opts, identityOnly: true, publicRoute: true });
+}
+
+async function request(
+  method: string,
+  path: string,
+  opts: { body?: any; form?: FormData; sideEffect?: boolean; idempotencyKey?: string; query?: Record<string, string>; team?: string; identityOnly?: boolean; authorization?: string; publicRoute?: boolean }
+) {
+  if (opts.idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(opts.idempotencyKey)) throw new Error("Idempotency key must be 8–128 letters, digits or ._:-");
 
   if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Ruta de API inválida");
   // Callers interpolate resource IDs into `path`; a hostile ID must not be able to
@@ -50,15 +66,15 @@ export async function api(
   const url = new URL(`${apiBaseUrl()}${path}`);
   // Defense in depth: reject anything that survived URL normalization as traversal.
   if (url.pathname.includes("//") || /(^|\/)\.\.?(\/|$)/.test(url.pathname) || url.hash) throw new Error("Ruta de API inválida");
-  const team = opts?.team ?? runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
-  const suppliedTeams = [team, opts?.query?.team, opts?.body?.team, url.searchParams.get("team")].filter(Boolean);
+  const team = opts.publicRoute ? undefined : opts.team ?? runtimeOptions().team ?? process.env.GIGSTACK_TEAM;
+  const suppliedTeams = [team, opts.query?.team, opts.body?.team, url.searchParams.get("team")].filter(Boolean);
   if (new Set(suppliedTeams).size > 1) throw new Error("El equipo del body/query no coincide con --team");
-  if (opts?.query) {
+  if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined) url.searchParams.set(k, v);
     }
   }
-  if (team && !opts?.identityOnly) url.searchParams.set("team", team);
+  if (team && !opts.identityOnly) url.searchParams.set("team", team);
   const timeout = Number(process.env.GIGSTACK_API_TIMEOUT_MS ?? 30000);
   if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 300000) throw new Error("GIGSTACK_API_TIMEOUT_MS debe estar entre 1 y 300000");
 
@@ -69,15 +85,15 @@ export async function api(
       redirect: "error",
       signal: AbortSignal.timeout(timeout),
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        ...(opts?.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
-        ...(opts?.form ? {} : { "Content-Type": "application/json" }),
+        ...(opts.authorization ? { Authorization: opts.authorization } : {}),
+        ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
+        ...(opts.form ? {} : { "Content-Type": "application/json" }),
       },
-      body: opts?.form ?? (opts?.body !== undefined ? JSON.stringify(opts.body) : undefined),
+      body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
     });
   } catch (e: any) {
+    const write = opts.sideEffect || !["GET", "HEAD"].includes(method.toUpperCase());
     if (e.name === "TimeoutError" || e.name === "AbortError") {
-      const write = opts?.sideEffect || !["GET", "HEAD"].includes(method.toUpperCase());
       throw Object.assign(new Error(write
         ? "Tiempo de espera agotado; el resultado de la operación es desconocido. Consulta el estado antes de repetirla."
         : "Tiempo de espera agotado al consultar el API."), { code: "request_timeout", outcome: write ? "unknown" : "not_received" });
@@ -91,7 +107,7 @@ export async function api(
   let text: string;
   try { text = await res.text(); }
   catch {
-    throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: !opts?.sideEffect && ["GET", "HEAD"].includes(method.toUpperCase()) ? "not_received" : "unknown" });
+    throw Object.assign(new Error("No se recibió la respuesta completa. Consulta el estado antes de repetir una operación."), { code: "incomplete_response", outcome: !opts.sideEffect && ["GET", "HEAD"].includes(method.toUpperCase()) ? "not_received" : "unknown" });
   }
   let data: any;
   try { data = text ? JSON.parse(text) : {}; }
