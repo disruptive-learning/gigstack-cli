@@ -5,8 +5,12 @@ import { join } from "node:path";
 const CONFIG_DIR = process.env.GIGSTACK_CONFIG_DIR || join(homedir(), ".config", "gigstack");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
+/** Set on profiles created by `gigstack signup` (agent sandbox, test mode only). */
+export interface SandboxInfo { email?: string; claimExpiresAt?: number | null; claimed?: boolean }
+export interface StoredProfile { apiKey: string; environment: string; baseUrl?: string; teamId?: string; sandbox?: SandboxInfo }
+
 interface Credentials {
-  profiles: Record<string, { apiKey: string; environment: string; baseUrl?: string }>;
+  profiles: Record<string, StoredProfile>;
   activeProfile: string;
 }
 
@@ -87,10 +91,10 @@ function writeCredentials(creds: Credentials) {
   }
 }
 
-export function saveProfile(name: string, apiKey: string, environment: string, baseUrl?: string) {
+export function saveProfile(name: string, apiKey: string, environment: string, baseUrl?: string, extra?: { teamId?: string; sandbox?: SandboxInfo }) {
   assertSafeProfileName(name);
   const creds = readCredentials() || { profiles: {}, activeProfile: name };
-  creds.profiles[name] = { apiKey, environment, ...(baseUrl ? { baseUrl } : {}) };
+  creds.profiles[name] = { apiKey, environment, ...(baseUrl ? { baseUrl } : {}), ...(extra?.teamId ? { teamId: extra.teamId } : {}), ...(extra?.sandbox ? { sandbox: extra.sandbox } : {}) };
   creds.activeProfile = name;
   writeCredentials(creds);
 }
@@ -106,6 +110,33 @@ export function removeProfile(name: string) {
   writeCredentials(creds);
 }
 
+/** A saved profile by name, without making it active. */
+export function getProfile(name: string): ({ name: string } & StoredProfile) | null {
+  if (!isSafeProfileName(name)) return null;
+  const creds = readCredentials();
+  if (!creds || !hasProfile(creds.profiles, name)) return null;
+  return { name, ...creds.profiles[name] };
+}
+
+/** Merge sandbox metadata into a saved profile (no-op when it does not exist). */
+export function updateProfileSandbox(name: string, sandbox: SandboxInfo): boolean {
+  if (!isSafeProfileName(name)) return false;
+  const creds = readCredentials();
+  if (!creds || !hasProfile(creds.profiles, name)) return false;
+  creds.profiles[name].sandbox = { ...(creds.profiles[name].sandbox ?? {}), ...sandbox };
+  writeCredentials(creds);
+  return true;
+}
+
+/** Saved profiles that belong to a team id, active first. */
+export function findProfilesByTeam(teamId: string): string[] {
+  const creds = readCredentials();
+  if (!creds) return [];
+  return Object.keys(creds.profiles)
+    .filter((name) => creds.profiles[name].teamId === teamId)
+    .sort((a, b) => Number(b === creds.activeProfile) - Number(a === creds.activeProfile));
+}
+
 export function switchProfile(name: string): boolean {
   if (!isSafeProfileName(name)) return false;
   const creds = readCredentials();
@@ -115,7 +146,7 @@ export function switchProfile(name: string): boolean {
   return true;
 }
 
-export function getActiveProfile(): { name: string; apiKey: string; environment: string; baseUrl?: string } | null {
+export function getActiveProfile(): ({ name: string } & StoredProfile) | null {
   const envKey = process.env.GIGSTACK_API_KEY;
   if (envKey) return { name: "env", apiKey: envKey, environment: "production" };
 

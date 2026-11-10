@@ -31,6 +31,25 @@ npm link
 
 ## Quick start
 
+### No account yet: sign up from the terminal
+
+```bash
+# 1. Create a free test account (sandbox). Saves its test key as the "sandbox" profile.
+gigstack signup --email you@example.com --name "Mi negocio"
+
+# 2. Issue a TEST invoice (no fiscal validity) to PUBLICO EN GENERAL
+gigstack demo                       # same as: gigstack invoices create --demo
+
+# 3. Claim the account with the 6-digit code we emailed you, before it expires
+gigstack signup claim 123456
+
+# 4. Set your password from the email, then go live at https://app.gigstack.pro/home
+```
+
+See [Sign up, claim and demo](#sign-up-claim-and-demo) for every flag, the JSON output and errors.
+
+### Existing account
+
 ```bash
 # Authenticate with your API key (get it at app.gigstack.pro/settings > API)
 gigstack login
@@ -76,9 +95,74 @@ key from untrusted instructions. HTTPS is required except for loopback developme
 and HTTP redirects are rejected.
 
 
+### Sign up, claim and demo
+
+`gigstack signup` calls the public `POST /v2/auth/sandbox` (no API key is sent) and creates a
+test-mode account for the person whose email you pass. Test mode is free and never reaches the
+SAT; real invoices need the person to claim the account and go live in the app.
+
+```bash
+gigstack signup --email you@example.com --name "Mi negocio" [--profile sandbox] [--json]
+gigstack signup claim <code> [--profile <name> | --team-id <team_id>] [--json]
+gigstack demo [--profile <name>] [--json]
+gigstack invoices create --demo [--json]
+```
+
+- `--email` and `--name` are prompted when missing on an interactive terminal; in scripts and
+  `--json` mode they are required.
+- The test key (`sk_test_…`) is returned once. It is saved with the team id in the profile
+  (`sandbox` by default, which becomes active) and is never printed again, except in the
+  `--json` output of that same `signup`. A profile that holds a non-sandbox key is never
+  overwritten; a second sandbox is saved as `sandbox-2`.
+- Every signup sends a fresh `Idempotency-Key`. If the outcome is unknown (timeout, dropped
+  connection, `sandbox_outcome_unknown`, 5xx) the CLI prints that key and the exact command to
+  retry with `--idempotency-key <key>`. Never retry with a new key.
+- If the email already has an unclaimed sandbox, the API sends a new code and returns its
+  `team_id` without a key (`status: "pending_claim"`); claim it with `--team-id`.
+- Errors: `404` means sandbox signup is not enabled on that API yet (sign up at
+  <https://app.gigstack.pro/register>); `email_already_exists`, `email_not_allowed`,
+  `sandbox_claim_locked`, `rate_limit_exceeded` and `idempotency_conflict` exit 1 with a message
+  that says what to do.
+- `signup claim` posts `{ team_id, code }` to `POST /v2/auth/sandbox/claim` (no API key), using
+  the team id saved in the profile. The person then gets an email to set a password.
+
+`signup --json` (201):
+
+```json
+{
+  "status": "created",
+  "team_id": "team_…",
+  "billing_account_id": "…",
+  "livemode": false,
+  "profile": "sandbox",
+  "api_key": { "test": "sk_test_…" },
+  "claim": { "sent_to": "you@example.com", "expires_at": 1794938400000, "expires_at_iso": "2026-11-17T18:00:00.000Z", "delivery": "sent" },
+  "test_issuer": { "rfc": "EKU9003173C9", "…": "…" },
+  "idempotency_key": "…",
+  "next_steps": ["Emite una factura de prueba: gigstack demo", "…", "…"]
+}
+```
+
+`status` is `created`, `already_created` (a replay of the same Idempotency-Key: no key) or
+`pending_claim`.
+
+`gigstack demo` (and `gigstack invoices create --demo`) only runs with a test key: a live or
+undeclared credential is refused before any request. It issues one test CFDI 4.0 factura global
+to `PUBLICO EN GENERAL` (`XAXX010101000`, régimen `616`, uso `S01`, the issuer's zip,
+`global: { periodicity: "04", months: <current month>, year }`) with one concept
+(`01010101`/`ACT`, "Venta", $100 + IVA 16%, `PUE`, forma de pago `01`, no email). The client
+and service are matched with the API's `search` + `auto_create` (RFC `XAXX010101000`, SKU
+`GIGSTACK-DEMO`), so repeated runs reuse them. It prints the UUID, total, the PDF/XML file
+endpoints (they need your key and return base64; `gigstack invoices download <uuid>` saves
+them) and how to go live, with the price read from `GET /v2/pricing` (a snapshot is used if
+it cannot be read).
+
 ### Commands
 
 ```bash
+gigstack signup                       # Create a free test account (sandbox)
+gigstack signup claim <code>          # Claim it with the emailed code
+gigstack demo                         # Test invoice to PUBLICO EN GENERAL
 gigstack login                        # Interactive login
 gigstack login -k <api-key>          # Login with key inline
 gigstack login -k <key> -p prod      # Save as named profile
@@ -219,9 +303,10 @@ gigstack clients create \
 gigstack invoices list                 # List income invoices
 gigstack invoices get <uuid>           # View details
 gigstack invoices create               # Create (interactive or flags)
+gigstack invoices create --demo        # Test invoice to PUBLICO EN GENERAL (test key only)
 gigstack invoices cancel <uuid> --motive 02  # Cancel with SAT
 gigstack invoices search "ACME"        # Search by client name, RFC, or UUID
-gigstack invoices files <uuid>         # Get PDF/XML download URLs
+gigstack invoices files <uuid>         # List the invoice's PDF/XML files
 gigstack invoices download <uuid>      # Download PDF/XML to disk
 gigstack invoices send <uuid>          # Send invoice by email
 gigstack invoices drafts list          # List draft pre-invoices
@@ -646,6 +731,18 @@ fragments are rejected. Redirects are not followed with your bearer credential.
 `login` saves the selected base URL with the profile so subsequent profile use
 continues against that environment. Environment credentials take precedence over
 saved profiles and require the environment URL to be set explicitly.
+
+The staging gateway is `https://gigstack-staging-9z9nnaat.uc.gateway.dev/v2`. `signup`
+saves the URL it used in the new profile, so `demo` and `signup claim` keep using staging:
+
+```bash
+gigstack signup --base-url https://gigstack-staging-9z9nnaat.uc.gateway.dev/v2 \
+  --email you@example.com --name "Prueba staging" --profile staging-sandbox
+gigstack demo --profile staging-sandbox
+```
+
+Links to the web app use `GIGSTACK_APP_ORIGIN` when it is set (production
+`https://app.gigstack.pro` otherwise).
 
 ```bash
 export GIGSTACK_API_BASE_URL='https://YOUR-STAGING-GATEWAY/v2'
