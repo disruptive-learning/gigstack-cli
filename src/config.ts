@@ -5,6 +5,12 @@ import { join } from "node:path";
 const CONFIG_DIR = process.env.GIGSTACK_CONFIG_DIR || join(homedir(), ".config", "gigstack");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
+/** Where profiles are stored, for messages (honours GIGSTACK_CONFIG_DIR). */
+export function credentialsPath(): string {
+  const home = homedir();
+  return CREDENTIALS_FILE.startsWith(home + "/") ? "~" + CREDENTIALS_FILE.slice(home.length) : CREDENTIALS_FILE;
+}
+
 /** Set on profiles created by `gigstack signup` (agent sandbox, test mode only). */
 export interface SandboxInfo { email?: string; claimExpiresAt?: number | null; claimed?: boolean }
 export interface StoredProfile { apiKey: string; environment: string; baseUrl?: string; teamId?: string; sandbox?: SandboxInfo }

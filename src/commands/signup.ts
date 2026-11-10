@@ -8,8 +8,7 @@ import {
   getProfile,
   isSafeProfileName,
   saveProfile,
-  updateProfileSandbox,
-} from "../config.js";
+  updateProfileSandbox,, credentialsPath } from "../config.js";
 import { AGENT_CLIENT, appUrl } from "../onboarding.js";
 import { isJsonMode, printJson, sanitizeTerminal, success, warn } from "../output.js";
 import { ask } from "../prompt.js";
@@ -226,7 +225,7 @@ async function runSignup(opts: { email?: string; name?: string; profile: string;
   }
   success("Cuenta de prueba creada (modo de prueba, sin costo).");
   console.log(`  ${pc.bold("Equipo")}   ${sanitizeTerminal(teamId)}`);
-  console.log(`  ${pc.bold("Perfil")}   ${profileName} (activo) — llave de prueba guardada en ~/.config/gigstack/credentials.json`);
+  console.log(`  ${pc.bold("Perfil")}   ${profileName} (activo) — llave de prueba guardada en ${credentialsPath()}`);
   if (process.env.GIGSTACK_API_KEY) warn(`GIGSTACK_API_KEY está definida y tiene prioridad sobre el perfil guardado; quítala o usa --profile ${profileName} en gigstack demo.`);
   if (profileName !== opts.profile) warn(`El perfil "${opts.profile}" ya tenía otra cuenta de prueba; esta se guardó como "${profileName}".`);
   if (data.test_issuer?.rfc) console.log(`  ${pc.bold("Emisor")}   ${sanitizeTerminal(data.test_issuer.rfc)} (emisor de prueba del SAT)`);
